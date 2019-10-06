@@ -6,6 +6,13 @@ import json
 import sys
 import re
 
+from typing import Dict, List
+
+from loot_table_map import LootTableMap, populate_advancement_chain
+from loot_table import LootTable
+from dict_helper import get_all_entries
+
+
 if len(sys.argv) >= 2:
 	try:
 		seed = int(sys.argv[1])
@@ -25,164 +32,155 @@ datapack_filename = datapack_name + '.zip'
 
 print('Generating datapack...')
 
-loot_tables = {}
-remaining_selectors = []
+loot_table_maps: Dict[str, LootTableMap] = {}
+remaining_selectors: List[str] = []
 
 def load_table_info():
 	for dirpath, _dirnames, filenames in os.walk('loot_tables'):
 		for filename in filenames:
-
 			selector = filename.replace('.json', '')
-
+			path = dirpath.replace('loot_tables\\', '').split('\\')
 			with open(os.path.join(dirpath, filename)) as json_file:
-				loot_table = {
-					'selector': selector,
-					'path': dirpath.replace('loot_tables\\', '').split('\\'),
-					'original': json.load(json_file),
-					#'remapped': dict,
-					#'remap_selector': str,
-					#'adv_chain': list,
-					#'adv_branches': dict
-				}
-			
-			loot_tables[selector] = loot_table
+				json_body = json.load(json_file)
+				loot_table = LootTable(json_body)
+			loot_table_maps[selector] = LootTableMap(selector, path, loot_table)
 			remaining_selectors.append(selector)
 load_table_info()
+
 
 print('Randomizing drops...')
 
 #For Randomization to match Sethbling's the python version must be 3.6+ (For ordered dictionaries)
 def randomize():
-	for selector in loot_tables:
+	for selector in loot_table_maps:
 		i = random.randint(0, len(remaining_selectors) - 1)
-		loot_tables[selector]['remapped'] = loot_tables[remaining_selectors[i]]['original']
-		loot_tables[selector]['remap_selector'] = remaining_selectors[i]
+		loot_table_maps[selector].remapped = loot_table_maps[remaining_selectors[i]].original
+		loot_table_maps[selector].remap_selector = remaining_selectors[i]
 		del remaining_selectors[i]
 randomize()
-
-def find_structures_with_parent(table: dict, is_match) -> list:
-	root = {
-		'parent': None,
-		'structure': table
-	}
-	search_queue = [root]
-	structures = [root] if is_match(table) else []
-
-	while(len(search_queue) > 0):
-		current = search_queue.pop()
-
-		for value in (current['structure'] if isinstance(current['structure'], list) else current['structure'].values()):
-			struc_with_parent = {
-				'parent': current,
-				'structure': value
-			}
-			if is_match(value):
-				structures.append(struc_with_parent)
-
-			if isinstance(value, [list, dict]):
-				search_queue.append(struc_with_parent)
-
-	return structures
-
-
-def find_structures(table: dict, is_match) -> list:
-	search_queue = [table]
-	structures = [table] if is_match(table) else []
-
-	while(len(search_queue) > 0):
-		current = search_queue.pop()
-
-		for value in (current if isinstance(current, list) else current.values()):
-			if is_match(value):
-				structures.append(value)
-
-			if isinstance(value, (list, dict)):
-				search_queue.append(value)
-
-	return structures
-
-
-def matches_item_or_loot_table(struct) -> bool:
-	return (
-		isinstance(struct, dict) and
-		(
-			'name' in struct and
-			'type' in struct and
-			(
-				struct['type'] == 'minecraft:item' or
-				struct['type'] == 'minecraft:loot_table'
-			)
-		)
-	)
-
-
-def get_all_item_drops(table: dict) -> list:
-	if 'pools' not in table:
-		return []
-
-	pools = table['pools']
-	items = []
-	for pool in pools:
-		for entry in pool['entries']:
-			structures = find_structures(
-				entry,
-				matches_item_or_loot_table
-			)
-
-			for structure in structures:
-				if structure['type'] == 'minecraft:loot_table':
-					selector = 'loot_table:{}'.format(structure['name'].split('/').pop())
-				else:
-					selector = structure['name'].replace('minecraft:', '')
-
-				if selector not in items:
-						items.append(selector)
-	return items
-
-def populate_advancement_chain(selector: str):
-	loot_table: dict = loot_tables[selector]
-	loot_table['adv_chain'] = []
-	loot_table['adv_branches'] = {}
-	advancement_chain: list = loot_table['adv_chain']
-	advancement_branches: dict = loot_table['adv_branches']
-	next_selector = selector
-	while True:
-		advancement_chain.append(next_selector)
-		items = get_all_item_drops(loot_table['remapped'])
-
-		if loot_tables[loot_table['remap_selector']]['original']['type'] != 'minecraft:block':
-			advancement_chain.append('loot_table:{}'.format(loot_table['remap_selector']))
-		else:
-			for i in range(len(items)):
-				if isinstance(items[i], str) and items[i] == loot_table['remap_selector']:
-					next_selector = items[i]
-					del items[i]
-					break
-
-		advancement_branches[loot_table['selector']] = items
-
-		loot_table = loot_tables[next_selector]
-
-		if loot_table['selector'] in advancement_chain:
-			break
 		
-
 
 print('Populating Advancement chains...')
 
-# for selector in loot_tables:
-# 	print('Populating chain for: {}'.format(selector))
-# 	populate_advancement_chain(selector)
-populate_advancement_chain('player')
+for selector in loot_table_maps:
+	print('Populating chain for: {}'.format(selector))
+	populate_advancement_chain(selector, loot_table_maps)
 
-print (loot_tables['player'])
+
+print('Generating Advancements...')
+
+advancements = {
+	'root': {
+		'display': {
+			'title': {
+				'text': 'You Broke Minecraft'
+			},
+			'description': {
+				'text': 'Randomize Your World'
+			},
+			'icon': {
+				'item': 'minecraft:music_disc_11'
+			},
+			'frame': 'challenge',
+			'show_toast': False,
+			'announce_to_chat': False,
+			'hidden': True,
+			'background': 'minecraft:textures/block/grass.png'
+		},
+		'criteria': {
+			'randomize_your_world': {
+				'trigger': 'minecraft:impossible'
+			}
+		}
+	}
+}
+
+def generate_advancements(loot_table: dict):
+	parent = 'root'
+	for link_index in range(0, len(loot_table['adv_chain'])):
+		selector = loot_table['adv_chain'][link_index]
+		name = selector if parent is 'root' else '{}_{}_{}'.format(loot_table['selector'], link_index, selector)
+		path = '\\'.join(loot_table['path'])
+		id = os.path.join(path, loot_table['selector'], name)
+		advancements[selector] = {
+			'display': {
+				'title': {
+					'text': selector
+				},
+				'description': {
+					'text': 'collect: {}'.format(selector)
+				},
+				'icon': {
+					'item': 'minecraft:music_disc_11'
+				},
+				'frame': 'challenge',
+				'show_toast': False,
+				'announce_to_chat': False,
+				'hidden': True
+			},
+			'parent': '',
+			'criteria': {
+				'randomize_your_world': {
+					'trigger': 'minecraft:inventory_changed',
+					'conditions': {
+						'items': [
+							{
+								'item': 'minecraft:{}'.format(selector)
+							}
+						]
+					}
+				}
+			}
+		}
+
+		if (selector in loot_table['adv_branches']):
+			branch = loot_table['adv_branches'][selector]
+			for branch_index in range(0, len(branch)):
+				selector = loot_table['adv_chain'][link_index]
+				name = selector if parent is 'root' else '{}_{}_{}'.format(loot_table['selector'], link_index, selector)
+				path = '\\'.join(loot_table['path'])
+				id = os.path.join(path, loot_table['selector'], name)
+				advancements[selector] = {
+					'display': {
+						'title': {
+							'text': selector
+						},
+						'description': {
+							'text': 'collect: {}'.format(selector)
+						},
+						'icon': {
+							'item': 'minecraft:music_disc_11'
+						},
+						'frame': 'challenge',
+						'show_toast': False,
+						'announce_to_chat': False,
+						'hidden': True
+					},
+					'parent': '',
+					'criteria': {
+						'randomize_your_world': {
+							'trigger': 'minecraft:inventory_changed',
+							'conditions': {
+								'items': [
+									{
+										'item': 'minecraft:{}'.format(selector)
+									}
+								]
+							}
+						}
+					}
+				}
+		parent = id
+
+
+print(json.dumps(loot_table_maps['player'].__dict__))
+
+
 
 # zipbytes = io.BytesIO()
 # zip = zipfile.ZipFile(zipbytes, 'w', zipfile.ZIP_DEFLATED, False)
 
-# for from_file in file_dict:
-# 	with open(from_file) as file:
-# 		contents = file.read()
+# for file_name in loot_table_maps:
 		
 # 	zip.writestr(os.path.join('data/minecraft/', file_dict[from_file]), contents)
 	
@@ -190,7 +188,7 @@ print (loot_tables['player'])
 
 # zip.writestr('data/minecraft/tags/functions/load.json', json.dumps({'values':['{}:reset'.format(datapack_name)]}))
 
-# zip.writestr('data/{}/functions/reset.mcfunction'.format(datapack_name), 'tellraw @a ["",{"text":"Loot table randomizer with advancement tree by Cethyrion, adapted from SethBling's Loot table randomizer","color":"green"}]')
+# zip.writestr('data/{}/functions/reset.mcfunction'.format(datapack_name), 'tellraw @a ["",{"text":"Loot table randomizer with advancement tree by Cethyrion, adapted from SethBling\'s Loot table randomizer","color":"green"}]')
 	
 # zip.close()
 # with open(datapack_filename, 'wb') as file:
