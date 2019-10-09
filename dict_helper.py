@@ -1,15 +1,19 @@
-from typing import Callable, List
+from typing import Callable, List, TypeVar, Union
 
 from loot_table import LootTable
-from entry import Entry, eEntry, EItem, ELootTable
+from entry import Entry, eEntry, ItemEntry, LootTableEntry
+from condition import Condition, eCondition
 
-def find_structures_with_parent(table: dict, is_match: Callable) -> list:
+
+T = TypeVar('T')
+
+def find_type_with_parents(table: dict, typ: T) -> List[T]:
 	root = {
 		'parent': None,
 		'structure': table
 	}
 	search_queue = [root]
-	structures = [root] if is_match(table) else []
+	structures = [root] if isinstance(table, typ) else []
 
 	while(len(search_queue) > 0):
 		current = search_queue.pop()
@@ -19,7 +23,7 @@ def find_structures_with_parent(table: dict, is_match: Callable) -> list:
 				'parent': current,
 				'structure': value
 			}
-			if is_match(value):
+			if isinstance(value, typ):
 				structures.append(struc_with_parent)
 
 			if isinstance(value, [list, dict]):
@@ -27,16 +31,15 @@ def find_structures_with_parent(table: dict, is_match: Callable) -> list:
 
 	return structures
 
-
-def find_structures(table: dict, is_match: Callable) -> list:
+def find_type_in(table: dict, typ: T) -> List[T]:
 	search_queue = [table]
-	structures = [table] if is_match(table) else []
+	structures = [table] if isinstance(table, typ) else []
 
 	while(len(search_queue) > 0):
 		current = search_queue.pop()
 
 		for value in (current if isinstance(current, list) else current.values()):
-			if is_match(value):
+			if isinstance(value, typ):
 				structures.append(value)
 
 			if isinstance(value, (list, dict)):
@@ -44,30 +47,38 @@ def find_structures(table: dict, is_match: Callable) -> list:
 
 	return structures
 
-
-def matches_item_or_loot_table(struct) -> bool:
-	return isinstance(struct, (EItem, ELootTable))
-
-
-def get_all_entries(table: LootTable) -> list:
+def get_all_entries(table: LootTable) -> List[Union[LootTableEntry, ItemEntry]]:
 	if 'pools' not in table:
 		return []
 
 	pools = table.pools
-	items = []
+	entries: List[Entry] = []
 	for pool in pools:
 		for entry in pool.entries:
-			structures = find_structures(
+			structures = find_type_in(
 				entry,
-				matches_item_or_loot_table
+				(ItemEntry, LootTableEntry)
 			)
 
 			for structure in structures:
-				if isinstance(structure, ELootTable):
-					selector = 'loot_table:{}'.format(structure.name.split('/').pop())
-				elif isinstance(structure, EItem):
-					selector = structure.name.replace('minecraft:', '')
+				if not any(e.name == structure.name for e in entries):
+					entries.append(structure)
+	return entries
 
-				if selector not in items:
-						items.append(selector)
-	return items
+def get_all_conditions(table: LootTable) -> List[Condition]:
+	if 'pools' not in table:
+		return []
+
+	pools = table.pools
+	conditions: List[Condition] = []
+	for pool in pools:
+		structures = find_type_in(
+			pool,
+			Condition
+		)
+
+		for structure in structures:
+			if structure not in conditions:
+				conditions.append(structure)
+				
+	return conditions

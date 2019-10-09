@@ -3,6 +3,12 @@ oot_is_dead_datapack
 loot_tables
 __pycache__
 
+rand_loot_adv_tree
+rand_loot_adv_tree.zip
+
+rand_loot_adv_tree_*
+rand_loot_adv_tree_*.zip
+
 .vscode
 
 test.json

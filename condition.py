@@ -39,6 +39,8 @@ class Condition(MCDict):
 		condition = json_body['condition']
 		if condition == eCondition.alternative:
 			return CAlternative(json_body)
+		else:
+			return Condition(json_body)
 
 class CAlternative(Condition):
 	terms: List[Condition] = mc_list('terms', Condition)
