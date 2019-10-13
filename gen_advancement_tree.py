@@ -9,9 +9,7 @@ import math
 
 from typing import Dict, List
 
-from dict_helper import get_all_entries
-
-from loot_table_map import LootTableMap, populate_advancement_chain, AdvItem, eAdvItemType
+from loot_table_map import LootTableMap, populate_advancement_chain, AdvItem, eAdvItemType, validate_conditions
 from loot_table import LootTable
 from advancement import Advancement, Rewards
 from display import Display, Icon, TextComponent
@@ -47,8 +45,10 @@ def load_table_info():
 			selector = filename.replace('.json', '')
 			path = dirpath.replace('loot_tables\\', '').split('\\')
 			with open(os.path.join(dirpath, filename)) as json_file:
-				json_body = json.load(json_file)
-				loot_table = LootTable(json_body)
+				json_dict = json.load(json_file)
+				if selector == 'guardian':
+					pass
+				loot_table = LootTable(json_dict)
 			loot_table_maps[selector] = LootTableMap(selector, path, loot_table)
 			remaining_selectors.append(selector)
 load_table_info()
@@ -59,12 +59,20 @@ print('Randomizing drops...')
 #For Randomization to match Sethbling's the python version must be 3.6+ (For ordered dictionaries)
 def randomize():
 	for selector in loot_table_maps:
-		i = random.randint(0, len(remaining_selectors) - 1)
-		loot_table_maps[selector].remapped = json.load(json.dumps(loot_table_maps[remaining_selectors[i]].original))
-		loot_table_maps[selector].remapped.typ = loot_table_maps[selector].original.typ
+		i = random.randrange(0, len(remaining_selectors))
+		loot_table_maps[selector].remapped = LootTable(json.loads(json.dumps(loot_table_maps[remaining_selectors[i]].original)))
 		loot_table_maps[selector].remap_selector = remaining_selectors[i]
 		del remaining_selectors[i]
 randomize()
+
+
+print('Validating loot tables...')
+
+def validate():
+	for selector in loot_table_maps:
+		# print('Validating: {}'.format(selector))
+		validate_conditions(loot_table_maps[selector])
+validate()
 		
 
 print('Populating Advancement chains...')
@@ -116,7 +124,7 @@ def generate_single_advancement(adv_link: AdvItem, link_index: int, path: str, b
 		]
 		trigger_type = eTrigger.inventory_changed
 		advancement.criteria = {
-			'collect': Criteria.populate(trigger_type, conditions)
+			'interact': Criteria.populate(trigger_type, conditions)
 		}
 	else:
 		advancement.criteria = {
@@ -224,6 +232,15 @@ zip.writestr('pack.mcmeta', json.dumps({'pack':{'pack_format':1, 'description':d
 zip.writestr('data/minecraft/tags/functions/load.json', json.dumps({'values':['{}:reset'.format(datapack_name)]}))
 
 zip.writestr('data/{}/functions/reset.mcfunction'.format(datapack_name), 'tellraw @a ["",{"text":"Loot table randomizer with advancement tree by Cethyrion, adapted from SethBling\'s Loot table randomizer","color":"green"}]')
+zip.writestr('data/{}/functions/give_all.mcfunction'.format(datapack_name),
+'advancement grant @a from rand_loot_adv_tree_1:blocks\n' +
+'advancement grant @a from rand_loot_adv_tree_1:chests\n'+
+'advancement grant @a from rand_loot_adv_tree_1:entities\n'+
+'advancement grant @a from rand_loot_adv_tree_1:gameplay\n'+
+'advancement grant @a from rand_loot_adv_tree_1:blocks_short\n'+
+'advancement grant @a from rand_loot_adv_tree_1:chests_short\n'+
+'advancement grant @a from rand_loot_adv_tree_1:entities_short\n'+
+'advancement grant @a from rand_loot_adv_tree_1:gameplay_short\n')
 	
 zip.close()
 with open(datapack_filename, 'wb') as file:

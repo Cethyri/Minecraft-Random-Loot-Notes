@@ -1,6 +1,6 @@
 from typing import Union
 
-from mc_helper import MCDict, mc_obj, mc_multi
+from mc_helper import MCDict, mc_property
 from mc_range import IntRange, init_int_or_range
 
 class eEnchantment(MCDict):
@@ -43,5 +43,5 @@ class eEnchantment(MCDict):
 	vanishing_curse			= 'minecraft:vanishing_curse'
 
 class Enchantment(MCDict):
-	enchantment:	eEnchantment			= mc_obj('enchantment', eEnchantment)
-	levels:			Union[IntRange, int]	= mc_multi('levels', Union[IntRange, int], init_int_or_range)
+	enchantment:	eEnchantment			= mc_property('enchantment', eEnchantment)
+	levels:			Union[IntRange, int]	= mc_property('levels', init_int_or_range)

@@ -1,6 +1,6 @@
 from enum import Enum
 
-from mc_helper import MCDict, mc_obj
+from mc_helper import MCDict, mc_property
 
 from position import Position
 
@@ -103,7 +103,7 @@ class eFeature(str, Enum):
 	village			= 'minecraft:village'
 
 class Location(MCDict):
-	biome:		eBiome		= mc_obj('biome', eBiome)
-	dimension:	eDimension	= mc_obj('dimension', eDimension)
-	feature:	eFeature	= mc_obj('feature', eFeature)
-	position:	Position	= mc_obj('position', Position)
+	biome:		eBiome		= mc_property('biome', eBiome)
+	dimension:	eDimension	= mc_property('dimension', eDimension)
+	feature:	eFeature	= mc_property('feature', eFeature)
+	position:	Position	= mc_property('position', Position)

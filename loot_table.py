@@ -1,9 +1,10 @@
 from enum import Enum
-from typing import List
+from typing import List, Callable
 
-from mc_helper import MCDict, mc_obj, mc_list
+from mc_helper import MCDict, mc_property, mc_list_property, MCInteractable, MCActionInfo, interact_with_subitems
 
 from pool import Pool
+from entry import Entry
 
 
 class eLootTable(str, Enum):
@@ -17,6 +18,11 @@ class eLootTable(str, Enum):
 	gift = 'minecraft:gift'
 
 
-class LootTable(MCDict):
-	typ:	eLootTable = mc_obj('type', eLootTable)
-	pools:	List[Pool] = mc_list('pools', Pool)
+class LootTable(MCDict, MCInteractable):
+	typ:	eLootTable = mc_property('type', eLootTable)
+	pools:	List[Pool] = mc_list_property('pools', Pool)
+
+	def interact(self, info: MCActionInfo):
+		if 'pools' in self:
+			interact_with_subitems(self.pools, info)
+		

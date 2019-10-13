@@ -1,7 +1,7 @@
-from typing import List, Union, NewType
+from typing import List, Union, Callable
 from enum import Enum
 
-from mc_helper import MCDict, mc_obj, mc_list, mc_multi_list
+from mc_helper import MCDict, mc_property, mc_list_property, MCInteractable, MCActionInfo, eItemType, eActionType, interact_with_items, interact_with_subitems
 
 from condition import Condition
 from function import Function
@@ -21,11 +21,25 @@ class eDynamic(str, Enum):
 	dyn_self = 'minecraft:self'
 
 
-class Entry(MCDict):
-	conditions:	List[Condition]	= mc_multi_list('conditions', Condition, Condition.create)
-	typ:		eEntry			= mc_obj('type', eEntry)
-	weight:		int				= mc_obj('weight', int)
-	quality:	int				= mc_obj('quality', int)
+class Entry(MCDict, MCInteractable):
+	conditions:	List[Condition]	= mc_list_property('conditions', Condition.create)
+	typ:		eEntry			= mc_property('type', eEntry)
+	weight:		int				= mc_property('weight', int)
+	quality:	int				= mc_property('quality', int)
+
+	def interact(self, info: MCActionInfo):
+		if info.item_type == eItemType.Entry and 'children' in self:
+			interact_with_items(self, 'children', info)
+
+		elif info.item_type == eItemType.Condition:
+			if 'conditions' in self:
+				interact_with_items(self, 'conditions', info)
+			if 'children' in self:
+				interact_with_subitems(self['children'], info)
+				if info.action_type is eActionType.Delete and self.typ is eEntry.alternatives and not any('conditions' in child for child in self['children']):
+					self.typ = eEntry.group
+			if 'functions' in self:
+				interact_with_subitems(self['functions'], info)
 
 	@staticmethod
 	def create(json_body):
@@ -57,24 +71,27 @@ class Entry(MCDict):
 
 
 class ItemEntry(Entry):
-	name:		str				= mc_obj('name', str)
-	functions:	List[Function]	= mc_multi_list('functions', Function, Function.create)
+	name:		str				= mc_property('name', str)
+	functions:	List[Function]	= mc_list_property('functions', Function.create)
 
 class TagEntry(Entry):
-	name:	str		= mc_obj('name', str)
-	expand:	bool	= mc_obj('expand', bool)
+	name:	str		= mc_property('name', str)
+	expand:	bool	= mc_property('expand', bool)
 
 class LootTableEntry(Entry):
-	name: str = mc_obj('name', str)
+	name: str = mc_property('name', str)
 
 class GroupEntry(Entry):
-	children: List[Entry] = mc_multi_list('children', Entry, Entry.create)
+	children: List[Entry] = mc_list_property('children', Entry.create)
 
 class AlternativesEntry(Entry):
-	children: List[Entry] = mc_multi_list('children', Entry, Entry.create)
+	children: List[Entry] = mc_list_property('children', Entry.create)
 
 class SequenceEntry(Entry):
-	children: List[Entry] = mc_multi_list('children', Entry, Entry.create)
+	children: List[Entry] = mc_list_property('children', Entry.create)
 
 class DynamicEntry(Entry):
-	name: eDynamic = mc_obj('name', eDynamic)
+	name: eDynamic = mc_property('name', eDynamic)
+
+
+a = property()

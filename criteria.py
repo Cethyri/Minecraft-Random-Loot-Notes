@@ -1,7 +1,7 @@
 from typing import Union, List
 from enum import Enum
 
-from mc_helper import MCDict, mc_obj, mc_list, mc_multi
+from mc_helper import MCDict, mc_property, mc_list_property
 from mc_range import IntRange, init_int_or_range
 
 from location import eDimension
@@ -159,50 +159,50 @@ def switch(trigger_type: eTrigger, conditions: dict) -> TriggerConditions:
 
 
 class BredAnimals(TriggerConditions):
-	child:		dict = mc_obj('child', dict)
-	parent:		dict = mc_obj('parent', dict)
-	partner:	dict = mc_obj('partner', dict)
+	child:		Entity = mc_property('child', Entity)
+	parent:		Entity = mc_property('parent', Entity)
+	partner:	Entity = mc_property('partner', Entity)
 
 class BrewedPotion(TriggerConditions):
-	potion: str = mc_obj('potion', str)
+	potion: str = mc_property('potion', str)
 
 class ChangedDimension(TriggerConditions):
-	frm:	eDimension = mc_obj('from', eDimension)
-	to:		eDimension = mc_obj('to', eDimension)
+	frm:	eDimension = mc_property('from', eDimension)
+	to:		eDimension = mc_property('to', eDimension)
 
 class ChanneledLightning(TriggerConditions):
-	victims: Entity = mc_list('victims', Entity)
+	victims: Entity = mc_property('victims', Entity)
 
 class ConstructBeacon(TriggerConditions):
-	level: Union[IntRange, int] = mc_multi('level', Union[IntRange, int], init_int_or_range)
+	level: Union[IntRange, int] = mc_property('level', init_int_or_range)
 
 class ConsumeItem(TriggerConditions):
-	item: Item = mc_obj('item', Item)
+	item: Item = mc_property('item', Item)
 
 class CuredZombieVillager(TriggerConditions):
-	villager:	Entity = mc_list('villager', Entity)
-	zombie:		Entity = mc_list('zombie', Entity)
+	villager:	Entity = mc_property('villager', Entity)
+	zombie:		Entity = mc_property('zombie', Entity)
 
 class EffectsChanged(TriggerConditions):
-	effects: dict = mc_obj('effect', dict)
+	effects: dict = mc_property('effect', dict)
 
 class EnchantedItem(TriggerConditions):
-	item:	Item					= mc_obj('item', Item)
-	levels:	Union[IntRange, int]	= mc_multi('levels', Union[IntRange, int], init_int_or_range)
+	item:	Item					= mc_property('item', Item)
+	levels:	Union[IntRange, int]	= mc_property('levels', init_int_or_range)
 
 class EnterBlock(TriggerConditions):
-	block: str	= mc_obj('block', str)
-	state: dict	= mc_obj('state', dict)
+	block: str	= mc_property('block', str)
+	state: dict	= mc_property('state', dict)
 
 class EntityHurtPlayer(TriggerConditions):
-	damage: dict = mc_obj('damage', dict)
+	damage: dict = mc_property('damage', dict)
 	
 class EntityKilledPlayer(TriggerConditions):
-	entity:			Entity = mc_obj('entity', Entity)
-	killing_blow:	dict = mc_obj('killing_blow', dict)
+	entity:			Entity = mc_property('entity', Entity)
+	killing_blow:	dict = mc_property('killing_blow', dict)
 
 class FilledBucket(TriggerConditions):
-	item: Item = mc_obj('item', Item)
+	item: Item = mc_property('item', Item)
 
 # class FishingRodHooked(TriggerConditions):
 # class HeroOfTheVillage(TriggerConditions):
@@ -211,8 +211,8 @@ class Impossible(TriggerConditions):
 	pass
 
 class InventoryChanged(TriggerConditions):
-	req_items:	List[Item]	= mc_list('items', Item)
-	slots:		dict		= mc_obj('slots', dict)
+	req_items:	List[Item]	= mc_list_property('items', Item)
+	slots:		dict		= mc_property('slots', dict)
 
 # class ItemDurabilityChanged(TriggerConditions):
 # class KilledByCrossbow(TriggerConditions):
@@ -234,14 +234,14 @@ class InventoryChanged(TriggerConditions):
 # class VoluntaryExile(TriggerConditions):
 
 class Criteria(MCDict):
-	trigger_type:	eTrigger	= mc_obj('trigger', eTrigger)
-	conditions:		TriggerConditions		= mc_obj('conditions', TriggerConditions)
+	trigger_type:	eTrigger			= mc_property('trigger', eTrigger)
+	conditions:		TriggerConditions	= mc_property('conditions', TriggerConditions)
 
 	@staticmethod
-	def create(json_body):
-		criteria = Criteria(json_body)
-		if 'conditions' in json_body:
-			criteria.conditions = switch(criteria.trigger_type, json_body['conditions'])
+	def create(json_dict):
+		criteria = Criteria(json_dict)
+		if 'conditions' in json_dict:
+			criteria.conditions = switch(criteria.trigger_type, json_dict['conditions'])
 		return criteria
 
 	@staticmethod
