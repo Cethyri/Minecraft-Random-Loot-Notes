@@ -152,7 +152,7 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 	entries: list
 
 	def collect(entry: Entry, info: MCActionInfo):
-		if isinstance(entry, (ItemEntry, LootTableEntry)) and not any(entry.typ is e.typ for e in entries):
+		if isinstance(entry, (ItemEntry, LootTableEntry)) and not any(entry.name == e.name and entry.typ is e.typ for e in entries):
 			entries.append(entry)
 
 	while build_chain:
