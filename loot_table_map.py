@@ -11,9 +11,12 @@ from entry import Entry, ItemEntry, LootTableEntry, eEntry
 from display import eFrame
 from condition import Condition, eCondition
 
+from re_helper import get_upper_selector
+
 class eAdvItemType(str, Enum):
 	root		= 'task'
 	block		= 'task'
+	root_table	= 'goal'
 	reference	= 'goal'
 	loop		= 'goal'
 	special		= 'goal'
@@ -23,15 +26,19 @@ class eAdvItemType(str, Enum):
 
 class AdvItem(dict):
 	selector:		str				= mc_property('selector', str)
-	valid_selector:	str				= mc_property('valid_selector', str)
+	item_selector:	str				= mc_property('item_selector', str)
 	adv_item_type:	eAdvItemType	= mc_property('adv_item_type', eAdvItemType)
+	title:			str				= mc_property('title', str)
+	description:	str				= mc_property('description', str)
 
 	@staticmethod
-	def populate(selector: str, adv_item_type: eAdvItemType, valid_selector: str = None):
+	def populate(selector: str, adv_item_type: eAdvItemType, item_selector: str = None, title: str = None, description: str = None):
 		adv_item = AdvItem()
 		adv_item.selector = selector
 		adv_item.adv_item_type = adv_item_type
-		adv_item.valid_selector = selector if valid_selector is None else valid_selector
+		adv_item.item_selector = selector if item_selector is None else item_selector
+		adv_item.title = title
+		adv_item.description = description
 		return adv_item
 
 path_sep = '\\'
@@ -43,6 +50,7 @@ class LootTableMap():
 		self.original	= loot_table
 		self.is_loop	= False
 		self.is_sub		= False
+		self.adv_length = 0
 
 		self.remapped:			LootTable
 		self.remap_selector:	str
@@ -71,61 +79,186 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 	if loot_table_map.original.typ is eLootTable.block:
 		prev_type = adv_link.adv_item_type
 		adv_link.adv_item_type = eAdvItemType.special
-		if loot_table_map.selector.startswith('potted'):
-			adv_link.valid_selector = loot_table_map.selector.replace('potted_', '')		
-		elif loot_table_map.selector in ['pumpkin_stem', 'attached_pumpkin_stem', 'melon_stem', 'attached_melon_stem']:
-			adv_link.valid_selector = loot_table_map.selector.replace('attached_', '').replace('_stem', '_seeds')
-		elif loot_table_map.selector in ['beetroots', 'carrots']:
-			adv_link.valid_selector = loot_table_map.selector[:-1]
-		elif loot_table_map.selector == 'potatoes':
-			adv_link.valid_selector = 'potato'
-		elif loot_table_map.selector == 'bamboo_sapling':
-			adv_link.valid_selector = 'bamboo'
-		elif loot_table_map.selector == 'cocoa':
-			adv_link.valid_selector = 'cocoa_beans'
-		elif loot_table_map.selector == 'frosted_ice':
-			adv_link.valid_selector = 'ice'
-		elif loot_table_map.selector == 'kelp_plant':
-			adv_link.valid_selector = 'kelp'
-		elif loot_table_map.selector == 'redstone_wire':
-			adv_link.valid_selector = 'redstone'
-		elif loot_table_map.selector == 'tripwire':
-			adv_link.valid_selector = 'string'
-		elif loot_table_map.selector == 'sweet_berry_bush':
-			adv_link.valid_selector = 'sweet_berries'
-		elif loot_table_map.selector == 'tall_seagrass':
-			adv_link.valid_selector = 'seagrass'
+
+		if adv_link.selector.startswith('potted'):
+			adv_link.item_selector = adv_link.selector.replace('potted_', '')
+			adv_link.description = 'Break a {}'.format(get_upper_selector(adv_link.selector))
+
+		elif adv_link.selector in ['pumpkin_stem', 'attached_pumpkin_stem', 'melon_stem', 'attached_melon_stem']:
+			adv_link.item_selector = adv_link.selector.replace('attached_', '').replace('_stem', '_seeds')
+			adv_link.description = 'Break a {}'.format(get_upper_selector(adv_link.item_selector))
+
+		elif adv_link.selector in ['beetroots', 'carrots']:
+			adv_link.item_selector = adv_link.selector[:-1]
+			adv_link.description = 'Grow {}'.format(get_upper_selector(adv_link.selector))
+
+		elif adv_link.selector == 'potatoes':
+			adv_link.item_selector = 'potato'
+			adv_link.description = 'Grow {}'.format(get_upper_selector(adv_link.selector))
+
+		elif adv_link.selector == 'bamboo_sapling':
+			adv_link.item_selector = 'bamboo'
+			adv_link.description = 'Break a Bamboo Sapling'
+
+		elif adv_link.selector == 'cocoa':
+			adv_link.item_selector = 'cocoa_beans'
+			adv_link.description = 'Grow {}'.format(get_upper_selector(adv_link.item_selector))
+
+		elif adv_link.selector == 'frosted_ice':
+			adv_link.item_selector = 'ice'
+			adv_link.description = 'Shatter Frosted Ice'
+
+		elif adv_link.selector == 'kelp_plant':
+			adv_link.item_selector = 'kelp'
+			adv_link.description = 'Break a Kelp Plant'
+
+		elif adv_link.selector == 'redstone_wire':
+			adv_link.item_selector = 'redstone'
+
+		elif adv_link.selector == 'tripwire':
+			adv_link.item_selector = 'string'
+
+		elif adv_link.selector == 'sweet_berry_bush':
+			adv_link.item_selector = 'sweet_berries'
+			adv_link.description = 'Break a Sweet Berry Bush'
+
+		elif adv_link.selector == 'tall_seagrass':
+			adv_link.item_selector = 'seagrass'
+
 		else:
 			adv_link.adv_item_type = prev_type
+
+		if adv_link.description is None:
+			adv_link.description = 'Break {}'.format(get_upper_selector(adv_link.selector))
+
 	elif loot_table_map.original.typ is eLootTable.entity:
-		if loot_table_map.selector == 'sheep' or 'sheep' in loot_table_map.path:
-			adv_link.valid_selector = 'sheep_spawn_egg'
-		elif loot_table_map.selector == 'ender_dragon':
-			adv_link.valid_selector = 'dragon_head'
-		elif loot_table_map.selector == 'giant':
-			adv_link.valid_selector = 'zombie_head'
-		elif loot_table_map.selector == 'illusioner':
-			adv_link.valid_selector = 'pillager_spawn_egg'
-		elif loot_table_map.selector == 'iron_golem':
-			adv_link.valid_selector = 'pumpkin'
-		elif loot_table_map.selector == 'snow_golem':
-			adv_link.valid_selector = 'pumpkin'
-		elif loot_table_map.selector == 'player':
-			adv_link.valid_selector = 'player_head'
-		elif loot_table_map.selector == 'wither':
-			adv_link.valid_selector = 'wither_skeleton_skull'
-		elif not loot_table_map.selector == 'armor_stand':
-			adv_link.valid_selector = '{}_spawn_egg'.format(adv_link.selector)
+		if adv_link.selector == 'sheep' or 'sheep' in loot_table_map.path:
+			adv_link.item_selector = 'sheep_spawn_egg'
+			if adv_link.selector != 'sheep':
+				adv_link.title = '{} Sheep'.format(get_upper_selector(adv_link.selector))
+				adv_link.description = 'Kill a {} Sheep'.format(get_upper_selector(adv_link.selector))
+			else:
+				adv_link.description = 'The Sheep Loot Table'
+				adv_link.adv_item_type = eAdvItemType.root_table
+
+		elif adv_link.selector == 'ender_dragon':
+			adv_link.item_selector = 'dragon_head'
+			adv_link.description = 'Kill the {}'.format(get_upper_selector(adv_link.selector))
+
+		elif adv_link.selector == 'wither':
+			adv_link.item_selector = 'nether_star'
+			adv_link.description = 'Kill the {}'.format(get_upper_selector(adv_link.selector))
+
+		elif adv_link.selector == 'iron_golem':
+			adv_link.item_selector = 'iron_ingot'
+
+		elif adv_link.selector == 'snow_golem':
+			adv_link.item_selector = 'snow_ball'
+
+		elif adv_link.selector == 'giant':
+			adv_link.item_selector = 'zombie_spawn_egg'
+
+		elif adv_link.selector == 'illusioner':
+			adv_link.item_selector = 'pillager_spawn_egg'
+
+		elif adv_link.selector == 'player':
+			adv_link.item_selector = 'player_head'
+
+		elif adv_link.selector == 'skeleton':
+			adv_link.item_selector = 'skeleton_skull'
+
+		elif adv_link.selector == 'zombie':
+			adv_link.item_selector = 'zombie_head'
+
+		elif adv_link.selector == 'wither_skeleton':
+			adv_link.item_selector = 'wither_skeleton_skull'
+
+		elif adv_link.selector == 'creeper':
+			adv_link.item_selector = 'creeper_head'
+
+		elif not adv_link.selector == 'armor_stand':
+			adv_link.item_selector = '{}_spawn_egg'.format(adv_link.selector)
+
+		if adv_link.selector == 'armor_stand':
+			adv_link.description = 'Punch an Armor Stand'
+		
+		elif adv_link.selector == 'player':
+			adv_link.description = 'Get Yourself Killed'
+			
+		elif adv_link.description is None:
+			adv_link.description = 'Kill a {}'.format(get_upper_selector(adv_link.selector))
+
 	elif loot_table_map.original.typ is eLootTable.chest:
-		adv_link.valid_selector = 'chest'
+		adv_link.item_selector = 'chest'
+		adv_link.description = 'Find a {} Chest'.format(get_upper_selector(adv_link.selector))
+
 	elif loot_table_map.original.typ is eLootTable.fishing:
-		adv_link.valid_selector = 'fishing_rod'
+		adv_link.item_selector = 'fishing_rod'
+		if adv_link.selector == 'fishing':
+			adv_link.description = 'Go Fishing'
+		else:
+			adv_link.description = 'The {} Loot Table'.format(get_upper_selector(adv_link.selector))
+			adv_link.adv_item_type = eAdvItemType.root_table
+
+
 	elif loot_table_map.original.typ is eLootTable.advancement_reward:
-		adv_link.valid_selector = 'entity'
+		adv_link.item_selector = 'chest'
+		adv_link.description = 'An Advancement Reward'
+
 	elif loot_table_map.original.typ is eLootTable.generic:
-		adv_link.valid_selector = 'grass_block'
+		adv_link.item_selector = 'chest'
+		adv_link.description = 'An Generic Loot table'
+
 	elif loot_table_map.original.typ is eLootTable.gift:
-		adv_link.valid_selector = 'poppy'
+		if adv_link.selector.startswith('armorer'):
+			adv_link.item_selector = 'blast_furnace'
+
+		elif adv_link.selector.startswith('butcher'):
+			adv_link.item_selector = 'smoker'
+
+		elif adv_link.selector.startswith('cartographer'):
+			adv_link.item_selector = 'cartography_table'
+
+		elif adv_link.selector.startswith('cleric'):
+			adv_link.item_selector = 'brewing_stand'
+
+		elif adv_link.selector.startswith('farmer'):
+			adv_link.item_selector = 'composter'
+
+		elif adv_link.selector.startswith('fisherman'):
+			adv_link.item_selector = 'barrel'
+
+		elif adv_link.selector.startswith('fletcher'):
+			adv_link.item_selector = 'fletching_table'
+
+		elif adv_link.selector.startswith('leatherworker'):
+			adv_link.item_selector = 'cauldron'
+
+		elif adv_link.selector.startswith('librarian'):
+			adv_link.item_selector = 'lectern'
+
+		elif adv_link.selector.startswith('mason'):
+			adv_link.item_selector = 'stonecutter'
+
+		elif adv_link.selector.startswith('shepherd'):
+			adv_link.item_selector = 'loom'
+
+		elif adv_link.selector.startswith('toolsmith'):
+			adv_link.item_selector = 'smithing_table'
+
+		elif adv_link.selector.startswith('weaponsmith'):
+			adv_link.item_selector = 'grindstone'
+
+		else:
+			adv_link.item_selector = 'string'
+
+		adv_link.description = 'Recieve a {}'.format(get_upper_selector(adv_link.selector))
+
+	else:
+		print('Warning: unrecognized loot table type, script is probably outdated, download the newest version or yell at the developer for not updating the script!')
+	
+	if adv_link.description is None:
+		print('Warning something went wrong, description not set for: {}'.format(adv_link.selector))
 
 
 def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, LootTableMap]):
@@ -169,9 +302,10 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 
 		for entry in entries:
 			adv_item = create_adv_item(entry, loot_table_maps)
-			if not found_link and adv_item.selector == current_map.remap_selector and adv_item.adv_item_type is eAdvItemType.item:
+			if not found_link and adv_item.selector == current_map.remap_selector and adv_item.adv_item_type is eAdvItemType.item and loot_table_maps[adv_item.selector].original.typ is eLootTable.block:
 				last_link = adv_item
 				adv_item.adv_item_type = eAdvItemType.block
+				fix_selector(adv_item, loot_table_maps[adv_item.selector])
 				next_selector = current_map.remap_selector
 				found_link = True
 			else:
@@ -199,7 +333,11 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 			if build_chain == False:
 				loot_table_maps[root_selector].is_loop = True
 				last_link.adv_item_type = eAdvItemType.loop
-			advancement_chain.append(last_link)
+				if current_map.selector not in advancement_branches:
+					advancement_branches[current_map.selector] = []
+				advancement_branches[current_map.selector].append(last_link)
+			else:
+				advancement_chain.append(last_link)
 
 def create_variety(valid_conditions: Dict[eCondition, List[Condition]]):
 	variety_tracker = {}
@@ -216,7 +354,7 @@ class Ref():
 
 
 def validate_conditions(loot_table_map: LootTableMap):
-	if (loot_table_map.remapped.typ is loot_table_map.original.typ):
+	if loot_table_map.remapped.typ is loot_table_map.original.typ and loot_table_map.selector != 'player' and loot_table_map.selector != 'armor_stand':
 		return
 
 	loot_table_map.remapped.typ = loot_table_map.original.typ

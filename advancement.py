@@ -17,7 +17,7 @@ class Advancement(MCDict):
 	display:		Display				= mc_property('display', Display)
 	parent:			str					= mc_property('parent', str)
 	criteria:		Dict[str, Criteria]	= mc_dict_property('criteria', Criteria)
-	requirements:	List[str]			= mc_list_property('requirements', str)
+	requirements:	List[List[str]]		= mc_list_property('requirements', list)
 	rewards: 		Rewards				= mc_property('rewards', Rewards)
 
 	@staticmethod

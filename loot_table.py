@@ -8,12 +8,12 @@ from entry import Entry
 
 
 class eLootTable(str, Enum):
-	empty = 'minecraft:empty'
-	entity = 'minecraft:entity'
+	advancement_reward = 'minecraft:advancement_reward'
 	block = 'minecraft:block'
 	chest = 'minecraft:chest'
+	empty = 'minecraft:empty'
+	entity = 'minecraft:entity'
 	fishing = 'minecraft:fishing'
-	advancement_reward = 'minecraft:advancement_reward'
 	generic = 'minecraft:generic'
 	gift = 'minecraft:gift'
 

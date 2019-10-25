@@ -4,7 +4,7 @@ from enum import Enum
 from mc_helper import MCDict, mc_property, mc_list_property
 from mc_range import IntRange, init_int_or_range
 
-from location import eDimension
+from location import eDimension, Location
 from entity import Entity
 from item import Item
 
@@ -198,14 +198,20 @@ class EntityHurtPlayer(TriggerConditions):
 	damage: dict = mc_property('damage', dict)
 	
 class EntityKilledPlayer(TriggerConditions):
-	entity:			Entity = mc_property('entity', Entity)
-	killing_blow:	dict = mc_property('killing_blow', dict)
+	entity:			Entity	= mc_property('entity', Entity)
+	killing_blow:	dict	= mc_property('killing_blow', dict)
 
 class FilledBucket(TriggerConditions):
 	item: Item = mc_property('item', Item)
 
-# class FishingRodHooked(TriggerConditions):
-# class HeroOfTheVillage(TriggerConditions):
+class FishingRodHooked(TriggerConditions):
+	entity:	Entity	= mc_property('entity', Entity)
+	item:	Item	= mc_property('item', Item)
+	rod:	Item	= mc_property('item', Item)
+
+
+class HeroOfTheVillage(TriggerConditions):
+	pass
 
 class Impossible(TriggerConditions):
 	pass
@@ -221,7 +227,11 @@ class InventoryChanged(TriggerConditions):
 # class NetherTravel(TriggerConditions):
 # class PlacedBlock(TriggerConditions):
 # class PlayerHurtEntity(TriggerConditions):
-# class PlayerKilledEntity(TriggerConditions):
+
+class PlayerKilledEntity(TriggerConditions):
+	entity:			Entity	= mc_property('entity', Entity)
+	killing_blow:	dict	= mc_property('killing_blow', dict)
+
 # class RecipeUnlocked(TriggerConditions):
 # class ShotCrossbow(TriggerConditions):
 # class SleptInBed(TriggerConditions):
