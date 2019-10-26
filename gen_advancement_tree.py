@@ -99,10 +99,11 @@ functions: Dict[str, List[str]] = {}
 
 reset_function_list = [
 	'tellraw @a ["",{"text":"Loot table randomizer with advancement tree by Cethyrion, adapted from SethBling\'s Loot table randomizer","color":"green"}]',
-	'scoreboard objectives add incomplete dummy'
-	'scoreboard objectives add complete dummy'
-	'scoreboard objectives add reference_complete dummy'
+	'scoreboard objectives add incomplete dummy',
+	'scoreboard objectives add complete dummy',
+	'scoreboard objectives add ref_complete dummy'
 ]
+remove_function_list = []
 tick_function_list = []
 
 def get_namespaced_selector(pathed_selector: str, additional: str = None):
@@ -148,26 +149,63 @@ def get_pathed_selector(selector: str, path: str, base: str, link_index: int):
 	name = '{}-{}'.format(link_index, selector) if link_index >= 0 else selector
 	return os.path.join(path, base, name).replace('\\', '/')
 
-def generate_descriptions_and_children_functions(pathed_selector: str, start_link: AdvItem, callback: Callable):
+def generate_children_functions(pathed_selector: str, start_link: AdvItem, path: str, base: str, child_index: int, execute_conditions: Callable):
+	
+	functions[pathed_selector].append('scoreboard players set @s incomplete 0')
+	functions[pathed_selector].append('scoreboard players set @s complete 0')
 			
 	references = []
 	search_queue = [start_link]
-	adv_link = start_link
-	current_map = loot_table_maps[adv_link.selector]
+	reference_namespaced_selectors = {}
 
-	while True:
-		adv_link = search_queue.pop()
-		current_map = loot_table_maps[adv_link.selector]
-		if current_map.selector in references:
-			break
+	cur_link = AdvItem
+	current_map: LootTableMap
+	
+	is_reference = False
+
+	while len(search_queue) > 0:
+		cur_link = search_queue.pop()
+		current_map = loot_table_maps[cur_link.selector]
+
+		if is_reference:
+			functions[pathed_selector].append('scoreboard players set @s ref_complete 0')
 
 		references.append(current_map.selector)
+		if start_link.selector == 'buried_treasure':
+			pass
 
-		if adv_link.selector in current_map.adv_branches:
-			for adv_child in current_map.adv_branches[adv_link.selector]:
-				callback(adv_link, adv_child, adv_link == start_link)
-				if adv_child.adv_item_type == eAdvItemType.reference:
-					search_queue.append(adv_child)
+		branches = []
+		if cur_link.selector in current_map.adv_branches:
+			branches.extend(current_map.adv_branches[cur_link.selector])
+		if len(current_map.adv_chain) > 1 and current_map.adv_chain[1].adv_item_type is not eAdvItemType.special:
+			branches.append(current_map.adv_chain[1])
+
+		for adv_child in branches:
+			child_pathed_selector = get_pathed_selector(adv_child.selector, path, base, 1 if is_reference else child_index)
+
+			if adv_child.adv_item_type is not eAdvItemType.item and adv_child.adv_item_type is not eAdvItemType.reference and adv_child.adv_item_type is not eAdvItemType.block and adv_child.adv_item_type is not eAdvItemType.loop:
+				print('Warning: unknown child advancement type... {}'.format(adv_child.selector))
+				print('Parent Selector: {}'.format(current_map.selector))
+
+			namespaced_selector = get_namespaced_selector(child_pathed_selector)
+			if adv_child.adv_item_type is not eAdvItemType.reference and adv_child.selector == adv_child.item_selector:
+				functions[pathed_selector].append('execute {} run advancement grant @s only {}'.format(execute_conditions(adv_child), namespaced_selector))
+				functions[pathed_selector].append('scoreboard players add @s[advancements = {{ {} = true }}] complete 1'.format(namespaced_selector))
+				functions[pathed_selector].append('scoreboard players add @s[advancements = {{ {} = false }}] incomplete 1'.format(namespaced_selector))
+				
+				if is_reference:
+					functions[pathed_selector].append('scoreboard players add @s[advancements = {{ {} = true }}] ref_complete 1'.format(namespaced_selector))
+
+			elif adv_child.adv_item_type is eAdvItemType.reference and adv_child.selector not in references:
+				search_queue.append(adv_child)
+				reference_namespaced_selectors[adv_child.selector] = namespaced_selector
+
+		if is_reference:
+			root_namespaced_selector = get_namespaced_selector(get_pathed_selector(cur_link.selector, path, base, 0))
+			functions[pathed_selector].append('advancement grant @s[scores = {{ ref_complete = 1.. }}] only {}'.format(reference_namespaced_selectors[cur_link.selector]))
+			functions[pathed_selector].append('advancement grant @s[scores = {{ ref_complete = 1.. }}] only {}'.format(root_namespaced_selector))
+		else:
+			is_reference = True
 
 def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base: str, link_index: int):
 	global objective_num
@@ -183,7 +221,9 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	
 	functions[pathed_selector] = []
 
-	objective_name = 'rand_obj_{}'.format(objective_num)
+	objective_name = '{}_r{}'.format(shorten_selector(adv_link.selector), objective_num)
+	if len(objective_name) > 16:
+		print(objective_name)
 	objective_num += 1
 	child_index = link_index + 1
 
@@ -194,148 +234,52 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 		reset_function_list.append('scoreboard objectives add {} dummy'.format(objective_name))
 		reset_function_list.append('scoreboard players set @a {} 1'.format(objective_name))
 		
-		tick_function_list.append('execute as @a[scores = {{ {} = 1.. }}] at @e[distance = ..8, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:armor_stand" }}}}] run function {}'.format(objective_name, pathed_selector))
-		
-		functions[pathed_selector].append('say @s triggered {} : got {} : because {}'.format(pathed_selector, adv_link.selector, objective_name))
-		functions[pathed_selector].append('advancement grant @s only {}'.format(namespaced_selector))
+		tick_function_list.append('execute as @a[scores = {{ {} = 1.. }}] at @s at @e[distance = ..8, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item: {{ id:"minecraft:armor_stand" }}}}] run function {}'.format(objective_name, namespaced_selector))
+
+		functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
 		functions[pathed_selector].append('scoreboard players set @s {} 0'.format(objective_name))
 
-		functions[pathed_selector].append('scoreboard players set @s incomplete 0')
-		functions[pathed_selector].append('scoreboard players set @s complete 0')
-		
-		references = []
-		search_queue = [adv_link]
-		reference_namespaced_selectors = {}
-		cur_link = AdvItem
-		current_map: LootTableMap
-		is_reference = False
+		execute_conditions = lambda adv_child: 'if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_child.item_selector)
+		generate_children_functions(pathed_selector, adv_link, path, base, child_index, execute_conditions)
 
-		while len(search_queue) > 0:
-			cur_link = search_queue.pop()
-			current_map = loot_table_maps[cur_link.selector]
-
-			if is_reference:
-				functions[pathed_selector].append('scoreboard players set @s reference_complete 0')
-
-			references.append(current_map.selector)
-
-			if cur_link.selector in current_map.adv_branches:
-				for adv_child in current_map.adv_branches[cur_link.selector]:
-					child_pathed_selector = get_pathed_selector(adv_child.selector, path, base, 1 if is_reference else child_index)
-
-					if child_pathed_selector not in advancements:
-						print('Oops, that is not an advancement...{} using path: {}'.format(adv_child, child_pathed_selector))
-
-					namespaced_selector = get_namespaced_selector(child_pathed_selector)
-					if adv_child.adv_item_type is eAdvItemType.item:
-						functions[pathed_selector].append('execute if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{}" }}}}] run advancement grant @s only {} got_parent'.format(adv_child.item_selector, namespaced_selector))
-						functions[pathed_selector].append('scoreboard players add @s[advancement = {{ {} = true }}] complete'.format(namespaced_selector))
-						functions[pathed_selector].append('scoreboard players add @s[advancement = {{ {} = false }}] incomplete'.format(namespaced_selector))
-						
-						if is_reference:
-							functions[pathed_selector].append('scoreboard players add @s[advancement = {{ {} = true }}] reference_complete'.format(namespaced_selector))
-
-					elif adv_child.selector not in references:
-						search_queue.append(adv_child)
-						reference_namespaced_selectors[adv_child.selector] = namespaced_selector
-
-			if is_reference:
-				root_namespaced_selector = get_namespaced_selector(get_pathed_selector(cur_link.selector, path, base, 0))
-				functions[pathed_selector].append('advancement grant @s[score = {{ reference_complete = 1.. }}] {}'.format(reference_namespaced_selectors[cur_link.selector]))
-				functions[pathed_selector].append('advancement grant @s[score = {{ reference_complete = 1.. }}] {}'.format(root_namespaced_selector))
-			else:
-				is_reference = True
-
-		functions[pathed_selector].append('scoreboard players reset @s[score = {{ incomplete = 0 }}] {}'.format(objective_name))
-
-	elif loot_table_map.original.typ is eLootTable.entity:
-		if adv_link.selector == 'player':
-			conditions = EntityKilledPlayer()
-			killed_trigger_type = eTrigger.entity_killed_player
-		else:
-			conditions = PlayerKilledEntity()
-			conditions.entity = Entity()
-			if 'sheep' in loot_table_maps[adv_link.selector].path:
-				conditions.entity.typ = 'minecraft:sheep'
-				conditions.entity['color'] = sheep_color_to_number(adv_link.selector)
-			else:
-				conditions.entity.typ = 'minecraft:{}'.format(adv_link.selector)
-			killed_trigger_type = eTrigger.player_killed_entity
-
-		advancements[helper_selector] = Advancement()
-		advancements[helper_selector].criteria = {
-			'kill': Criteria.populate(killed_trigger_type, conditions)
-		}
-
-		advancements[helper_selector].rewards = Rewards()
-		advancements[helper_selector].rewards.function = namespaced_selector
-
-		functions[pathed_selector].append('say @s triggered {} : got {} : because {}'.format(pathed_selector, adv_link.selector, helper_selector))
 		functions[pathed_selector].append('advancement grant @s only {}'.format(namespaced_selector))
-
-		functions[pathed_selector].append('scoreboard players set @s incomplete 0')
-		
-		#add children
-
-		functions[pathed_selector].append('advancement revoke @s[score = {{ incomplete = 1.. }}] {}'.format(namespaced_helper))
-
-	elif adv_link.selector == 'fishing':
-		conditions = FishingRodHooked()
-
-		advancements[helper_selector] = Advancement()
-		advancements[helper_selector].criteria = {
-			'fish': Criteria.populate(eTrigger.fishing_rod_hooked, conditions)
-		}
-
-		advancements[helper_selector].rewards = Rewards()
-		advancements[helper_selector].rewards.function = namespaced_selector
-
-		functions[pathed_selector].append('say @s triggered {} : got {} : because {}'.format(pathed_selector, adv_link.selector, helper_selector))
-		functions[pathed_selector].append('advancement grant @s only {}'.format(namespaced_selector))
-
-		functions[pathed_selector].append('scoreboard players set @s incomplete 0')
-				
-		parent_name = get_upper_selector(adv_link.selector)
-		advancements[pathed_selector].display.description = "{} Loot Table Reference".format(parent_name)
-
-		#add children
-
-		functions[pathed_selector].append('advancement revoke @s[score = {{ incomplete = 1.. }}] {}'.format(namespaced_helper))
+		functions[pathed_selector].append('scoreboard players reset @s[scores = {{ incomplete = 0 }}] {}'.format(objective_name))
 
 	elif loot_table_map.original.typ is eLootTable.block:
 		reset_function_list.append('scoreboard objectives add {} minecraft.mined:minecraft.{}'.format(objective_name, adv_link.selector))
 		reset_function_list.append('scoreboard players set @a {} 0'.format(objective_name))
 
-		tick_function_list.append('execute as @a[scores = {{ {} = 1.. }}] run function {}'.format(objective_name, namespaced_selector))
+		tick_function_list.append('execute as @a[scores = {{ {} = 1.. }}] at @s run function {}'.format(objective_name, namespaced_selector))
 
-		functions[pathed_selector].append('say @s triggered {} : got {} : because {}'.format(pathed_selector, adv_link.selector, objective_name))
-		functions[pathed_selector].append('advancement grant @s only {}'.format(namespaced_selector))
+		functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
 		functions[pathed_selector].append('scoreboard players set @s {} 0'.format(objective_name))
-
-		functions[pathed_selector].append('scoreboard players set @s incomplete 0')
 		
-		#add children
+		execute_conditions = lambda adv_child: 'if entity @e[distance = ..8, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_child.item_selector)
+		generate_children_functions(pathed_selector, adv_link, path, base, child_index, execute_conditions)
 
-		functions[pathed_selector].append('scoreboard players reset @s[score = {{ incomplete = 0 }}] {}'.format(objective_name))
+		functions[pathed_selector].append('advancement grant @s only {}'.format(namespaced_selector))
+		functions[pathed_selector].append('scoreboard players reset @s[scores = {{ incomplete = 0 }}] {}'.format(objective_name))
 
 	elif loot_table_map.original.typ is eLootTable.chest:
 		reset_function_list.append('scoreboard objectives add {} dummy'.format(objective_name))
 		reset_function_list.append('scoreboard players set @a {} 0'.format(objective_name))
 
-		for double in range(1, 10):
-			distance = double / 2
-			tick_function_list.append('execute as @a[scores = {{ {} = 0 }}] at @s anchored eyes if		block ^ ^ ^{} minecraft:chest {{ LootTable: "minecraft:{}" }} run scoreboard players set @s {0} 1'.format(objective_name, distance, pathed_selector))
-			tick_function_list.append('execute as @a[scores = {{ {} = 1 }}] at @s anchored eyes unless	block ^ ^ ^{} minecraft:chest {{ LootTable: "minecraft:{}" }} run execute positioned ^ ^ ^{1} function {}'.format(objective_name, distance, pathed_selector, namespaced_selector))
-		
-		functions[pathed_selector].append('say @s triggered {} : got {} : because {}'.format(pathed_selector, adv_link.selector, objective_name))
-		functions[pathed_selector].append('advancement grant @s only {}'.format(namespaced_selector))
+		loot_table_pathed_selector = get_pathed_selector(adv_link.selector, path, '', -1)
+
+		for i in range(10):
+			score = i + 1
+			distance = score / 2
+			tick_function_list.append('execute as @a[scores = {{ {0} = 0 }}] at @s anchored eyes if block ^ ^ ^{1} minecraft:chest{{ LootTable: "minecraft:{2}" }} run scoreboard players set @s {0} {3}'.format(objective_name, distance, loot_table_pathed_selector, score))
+			tick_function_list.append('execute as @a[scores = {{ {0} = {3} }}] at @s anchored eyes unless block ^ ^ ^{1} minecraft:chest{{ LootTable: "minecraft:{2}" }} positioned ^ ^ ^{1} run function {4}'.format(objective_name, distance, loot_table_pathed_selector, score, namespaced_selector))
+			
+		functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
 		functions[pathed_selector].append('scoreboard players set @s {} 0'.format(objective_name))
-
-		functions[pathed_selector].append('scoreboard players set @s incomplete 0')
 		
-		#add children
+		execute_conditions = lambda adv_child: 'if block ~ ~ ~ chest{{ Items: [{{ id: "minecraft:{}" }}] }}'.format(adv_child.item_selector)
+		generate_children_functions(pathed_selector, adv_link, path, base, child_index, execute_conditions)
 
-		functions[pathed_selector].append('scoreboard players reset @s[score = {{ incomplete = 0 }}] {}'.format(objective_name))
+		functions[pathed_selector].append('scoreboard players reset @s[scores = {{ incomplete = 0 }}] {}'.format(objective_name))
+		functions[pathed_selector].append('advancement grant @s[scores = {{ complete = 1.. }}] only {}'.format(namespaced_selector))
 
 	elif loot_table_map.original.typ is eLootTable.gift and 'hero_of_the_village' in loot_table_map.path:
 		reset_function_list.append('scoreboard objectives add {} dummy'.format(objective_name))
@@ -343,38 +287,91 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 
 		villager_type = adv_link.selector.replace('_gift', '')
 
-		tick_function_list.append('execute as @a[scores = {{ {} = 1.. }}, nbt = {{ ActiveEffects: [{{ Id: 32b }}] }}] at @e[distance = ..8, type = minecraft: villager, nbt = {{ VillagerData: {{ profession:"minecraft: {}" }} }}] run function {}'.format(objective_name, distance, pathed_selector, ))
+		tick_function_list.append('execute as @a[scores = {{ {} = 1.. }}, nbt = {{ ActiveEffects: [{{ Id: 32b }}] }}] at @s at @e[distance = ..8, type = minecraft:villager, nbt = {{ VillagerData: {{ profession:"minecraft:{}" }} }}] run function {}'.format(objective_name, villager_type, namespaced_selector))
 		
-		functions[pathed_selector].append('say @s triggered {} : got {} : because {}'.format(pathed_selector, adv_link.selector, objective_name))
-		functions[pathed_selector].append('advancement grant @s only {}'.format(namespaced_selector))
-		functions[pathed_selector].append('scoreboard players set @s {} 0'.format(objective_name))
-
-		functions[pathed_selector].append('scoreboard players set @s incomplete 0')
+		functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
 		
-		#add children
+		execute_conditions = lambda adv_child: 'if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_child.item_selector)
+		generate_children_functions(pathed_selector, adv_link, path, base, child_index, execute_conditions)
 
-		functions[pathed_selector].append('scoreboard players reset @s[score = {{ incomplete = 0 }}] {}'.format(objective_name))
+		functions[pathed_selector].append('scoreboard players reset @s[scores = {{ incomplete = 0 }}] {}'.format(objective_name))
+		functions[pathed_selector].append('advancement grant @s[scores = {{ complete = 1.. }}] only {}'.format(namespaced_selector))
 
 	elif adv_link.selector == 'cat_morning_gift':
+		pass
 		reset_function_list.append('scoreboard objectives add sleeping dummy')
 		reset_function_list.append('scoreboard players set @a sleeping 0')
-		reset_function_list.append('scoreboard objectives add sleepTimer dummy')
-		reset_function_list.append('scoreboard players set @a sleepTimer 0')
 
-		tick_function_list.append('execute as @a[scores = {{ sleeping = 0.. }}] store result score @s sleeptimer run data get entity @s SleepTimer')
-		tick_function_list.append('execute as @a[scores = {{ sleeping = 0, sleeptimer = 1.. }}] run scoreboard players set @s sleeping 1')
-		tick_function_list.append('execute as @a[scores = {{ sleeping = 1, sleeptimer = 0 }}] run function {}'.format(namespaced_selector))
+		tick_function_list.append('execute as @a[scores = { sleeping = 0.. }] store result score @s sleeping run data get entity @s SleepTimer')
+		tick_function_list.append('execute as @a[scores = {{ sleeping = 101 }}] at @s at @e[distance = ..16, type = minecraft:cat] run function {}'.format(namespaced_selector))
 
-		functions[pathed_selector].append('say @s triggered {} : got {} : because {}'.format(pathed_selector, adv_link.selector, objective_name))
-		functions[pathed_selector].append('advancement grant @s only {}'.format(namespaced_selector))
+		functions[pathed_selector].append('say @s triggered {} : because sleeping'.format(namespaced_selector))
 		functions[pathed_selector].append('scoreboard players set @s sleeping 0')
-
-		functions[pathed_selector].append('scoreboard players set @s incomplete 0')
 		
-		#add children
-		'execute as @a[scores={sleeping=1..}] at entity @e[distance=8.., type=minecraft:cat] run say got it!'
+		execute_conditions = lambda adv_child: 'if entity @e[distance = ..4, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_child.item_selector)
+		generate_children_functions(pathed_selector, adv_link, path, base, child_index, execute_conditions)
+		execute_conditions = lambda adv_child: 'as @s[nbt = {{ Inventory: [{{ id: "minecraft:{}" }}] }}]'.format(adv_child.item_selector)
+		generate_children_functions(pathed_selector, adv_link, path, base, child_index, execute_conditions)
 
-		functions[pathed_selector].append('scoreboard players reset @s[score = {{ incomplete = 0 }}] {}'.format(objective_name))
+		functions[pathed_selector].append('scoreboard players reset @s[scores = { incomplete = 0 }] sleeping')
+		functions[pathed_selector].append('advancement grant @s[scores = {{ complete = 1.. }}] only {}'.format(namespaced_selector))
+		functions[pathed_selector].append('execute as @s[scores = {{ complete = 1.. }}] run say @s got {} : because sleeping'.format(namespaced_selector))
+
+	elif loot_table_map.original.typ is eLootTable.entity:
+		pass
+	# 	if adv_link.selector == 'player':
+	# 		conditions = EntityKilledPlayer()
+	# 		killed_trigger_type = eTrigger.entity_killed_player
+	# 	else:
+	# 		conditions = PlayerKilledEntity()
+	# 		conditions.entity = Entity()
+	# 		if 'sheep' in loot_table_maps[adv_link.selector].path:
+	# 			conditions.entity.typ = 'minecraft:sheep'
+	# 			conditions.entity['color'] = sheep_color_to_number(adv_link.selector)
+	# 		else:
+	# 			conditions.entity.typ = 'minecraft:{}'.format(adv_link.selector)
+	# 		killed_trigger_type = eTrigger.player_killed_entity
+
+	# 	advancements[helper_selector] = Advancement()
+	# 	advancements[helper_selector].criteria = {
+	# 		'kill': Criteria.populate(killed_trigger_type, conditions)
+	# 	}
+
+	# 	advancements[helper_selector].rewards = Rewards()
+	# 	advancements[helper_selector].rewards.function = namespaced_selector
+
+	# 	functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
+	# 	functions[pathed_selector].append('advancement grant @s only {}'.format(namespaced_selector))
+
+	# 	functions[pathed_selector].append('scoreboard players set @s incomplete 0')
+		
+	# 	#add children
+
+	# 	functions[pathed_selector].append('advancement revoke @s[scores = {{ incomplete = 1.. }}] {}'.format(namespaced_helper))
+
+	elif adv_link.selector == 'fishing':
+		pass
+	# 	conditions = FishingRodHooked()
+
+	# 	advancements[helper_selector] = Advancement()
+	# 	advancements[helper_selector].criteria = {
+	# 		'fish': Criteria.populate(eTrigger.fishing_rod_hooked, conditions)
+	# 	}
+
+	# 	advancements[helper_selector].rewards = Rewards()
+	# 	advancements[helper_selector].rewards.function = namespaced_selector
+
+	# 	functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
+	# 	functions[pathed_selector].append('advancement grant @s only {}'.format(namespaced_selector))
+
+	# 	functions[pathed_selector].append('scoreboard players set @s incomplete 0')
+				
+	# 	parent_name = get_upper_selector(adv_link.selector)
+	# 	advancements[pathed_selector].display.description = "{} Loot Table Reference".format(parent_name)
+
+	# 	#add children
+
+	# 	functions[pathed_selector].append('advancement revoke @s[scores = {{ incomplete = 1.. }}] {}'.format(namespaced_helper))
 
 	else:
 		print("No problem!")
@@ -392,11 +389,11 @@ def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespa
 	advancement.display = Display.populate(
 		icon		= item_selector,
 		title		= adv_link.title if (adv_link.title is not None) else cap_name,
-		description = adv_link.description,
-		frame		= adv_link.adv_item_type,
-		show		= True,#adv_link.adv_item_type == eAdvItemType.block or adv_link.adv_item_type == eAdvItemType.root or adv_link.adv_item_type == eAdvItemType.root_table,
-		announce	= True,#False,
-		hidden		= hidden and adv_link.adv_item_type != eAdvItemType.root and adv_link.adv_item_type != eAdvItemType.root_table
+		description = adv_link.description if (adv_link.description is not None) else 'No Description',
+		frame		= adv_link.adv_item_type.get_frame(),
+		show		= True,
+		announce	= True,
+		hidden		= hidden
 	)
 
 	if namespaced_parent_selector is not None:
@@ -406,18 +403,12 @@ def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespa
 	advancements[pathed_selector] = advancement
 
 	if gen_base_criteria:
-		if adv_link.adv_item_type is eAdvItemType.block or adv_link.adv_item_type is eAdvItemType.special and adv_link.selector == adv_link.item_selector:
-			conditions = InventoryChanged()
-			conditions.req_items = [
-				Item.populate(item_id = item_selector)
-			]
-			advancement.criteria = {
-				'collect': Criteria.populate(eTrigger.inventory_changed, conditions)
-			}
-		else:
-			advancement.criteria = {
-				'get': Criteria.populate(eTrigger.impossible)
-			}
+		# if (adv_link.adv_item_type is eAdvItemType.block or adv_link.adv_item_type is eAdvItemType.special or adv_link.selector == 'armor_stand') and adv_link.selector == adv_link.item_selector:
+		# 	conditions = InventoryChanged()
+		# 	conditions.req_items = [ Item.populate(item_id = item_selector) ]
+		# 	advancement.criteria = { 'collect': Criteria.populate(eTrigger.inventory_changed, conditions) }
+		# else:
+		advancement.criteria = { 'get': Criteria.populate(eTrigger.impossible) }
 
 def get_parent_tab(loot_table_map: LootTableMap):
 	if loot_table_map.original.typ is eLootTable.advancement_reward:
@@ -446,17 +437,19 @@ def get_parent_tab(loot_table_map: LootTableMap):
 		return 'no_parent'
 
 def set_child_description(adv_link: AdvItem, adv_child: AdvItem):
-	link_name = get_upper_selector(adv_link.selector)
+	link_name = adv_link.title
 	child_name = get_upper_selector(adv_child.selector)
+
+	loot_table_map = loot_table_maps[adv_link.selector]
 	
-	if adv_child.adv_item_type is eAdvItemType.item:
-		item = 'a {}'.format(child_name)
+	if adv_child.adv_item_type is eAdvItemType.item or adv_child.adv_item_type is eAdvItemType.loop:
+		item = 'This Item'
 	elif adv_child.adv_item_type is eAdvItemType.reference:
-		item = 'Items in the {} Loot Table'.format(child_name)
+		item = 'a {} Item'.format(child_name)
 
 	if adv_link.selector == 'sheep' or 'fishing' in loot_table_map.path:
 		action = 'Collect'
-		origin = 'From the {} Loot Table'.format(link_name)
+		origin = 'From This Loot Table'
 
 	elif adv_link.selector == 'armor_stand':
 		action = 'Collect'
@@ -480,20 +473,20 @@ def set_child_description(adv_link: AdvItem, adv_child: AdvItem):
 
 	elif loot_table_map.original.typ is eLootTable.chest:
 		action = 'Find'
-		origin = 'in a {} Chest'.format(link_name)
+		origin = 'in a {}'.format(link_name)
 
 	elif loot_table_map.original.typ is eLootTable.gift and 'hero_of_the_village' in loot_table_map.path:
 		action = 'Recieve'
 		origin = 'as a {}'.format(link_name)
 
 	elif adv_link.selector == 'cat_morning_gift':
-		action = 'Wake up to'
+		action = 'Recieve'
 		origin = 'From Your Cat'
 
 	else:
-		print('Warning: unknown child advancement type... {}'.format(adv_link))
-		action: 'Get'
-		origin: 'From {}'.format(link_name)
+		print('Warning: unknown parent advancement type... {}'.format(adv_link))
+		action = 'Get'
+		origin = 'From {}'.format(link_name)
 	
 	adv_child.description = '{} {} {}'.format(action, item, origin)
 
@@ -516,7 +509,7 @@ def generate_advancements(loot_table_map: LootTableMap):
 
 		adv_link = loot_table_map.adv_chain[link_index]
 
-		if adv_link.adv_item_type is eAdvItemType.special:
+		if adv_link.adv_item_type is eAdvItemType.special and child_pathed_parent is not None:
 			loot_table_map.adv_length += special_length
 			special_length = 0
 			pathed_parent = child_pathed_parent
@@ -534,10 +527,14 @@ def generate_advancements(loot_table_map: LootTableMap):
 			branch_length = len(branch)
 			if link_index == len(loot_table_map.adv_chain) - 1:
 				split = branch_length > 6
+				column = 0
 				if not split:
 					loot_table_map.adv_length += branch_length
 
 			for adv_child in branch:
+				if adv_child.selector == 'attached_pumpkin_stem':
+					print(adv_link)
+					print(adv_child)
 				set_child_description(adv_link, adv_child)
 				child_pathed_selector = get_pathed_selector(adv_child.selector, path, base, link_index + 1)
 				generate_single_advancement(adv_child, child_pathed_selector, child_pathed_parent)
@@ -545,31 +542,30 @@ def generate_advancements(loot_table_map: LootTableMap):
 				child_pathed_parent = get_namespaced_selector(child_pathed_selector)
 				special_length += 1
 				if split:
+					column += 1
 					loot_table_map.adv_length += 0.5
-					if loot_table_map.adv_length == branch_length / 2:
+					if column >= branch_length / 2:
 						child_pathed_parent = pathed_parent
+						column = 0
 		
 		generate_conditions(pathed_selector, adv_link, path, base, link_index)
 
-	if loot_table_map.adv_length == 1:
-		del advancements[first_path]
-		del functions[first_path]
-		del functions[first_path]
-	else:
-		if parent != 'fishing':
-			if loot_table_map.adv_length < 8:
-				advancements[first_path].parent = get_namespaced_selector(parent, '_short')
-			elif loot_table_map.adv_length < 16 and parent == 'entities':
-				advancements[first_path].parent = get_namespaced_selector(parent, '_medium_short')
-			elif loot_table_map.adv_length >= 24 and parent == 'entities':
-				advancements[first_path].parent = get_namespaced_selector(parent, '_long')
-		
-		tab_name = advancements[first_path].parent.replace('{}:'.format(datapack_name), '')
-		if advancements[first_path].parent not in tabs:
-			tabs.append(tab_name)
-			tabs_possible_images[tab_name] = []
+	if parent != 'fishing':
+		if loot_table_map.adv_length == 1:
+			advancements[first_path].parent = get_namespaced_selector('no_drops')
+		elif loot_table_map.adv_length < 8:
+			advancements[first_path].parent = get_namespaced_selector(parent, '_short')
+		elif loot_table_map.adv_length < 16 and parent == 'entities':
+			advancements[first_path].parent = get_namespaced_selector(parent, '_medium_short')
+		elif loot_table_map.adv_length >= 24 and parent == 'entities':
+			advancements[first_path].parent = get_namespaced_selector(parent, '_long')
+	
+	tab_name = advancements[first_path].parent.replace('{}:'.format(datapack_name), '')
+	if tab_name not in tabs:
+		tabs.append(tab_name)
+		tabs_possible_images[tab_name] = []
 
-		tabs_possible_images[tab_name].append(loot_table_map.adv_chain[0].item_selector)
+	tabs_possible_images[tab_name].append(loot_table_map.adv_chain[0].item_selector)
 
 count = 0
 for loot_table_map in loot_table_maps.values():
@@ -611,6 +607,7 @@ zip.writestr('data/minecraft/tags/functions/load.json', json.dumps({'values':['{
 zip.writestr('data/minecraft/tags/functions/tick.json', json.dumps({'values':['{}:tick'.format(datapack_name)]}))
 
 zip.writestr('data/{}/functions/reset.mcfunction'.format(datapack_name), "\n".join(reset_function_list))
+zip.writestr('data/{}/functions/remove.mcfunction'.format(datapack_name), "\n".join(remove_function_list))
 zip.writestr('data/{}/functions/tick.mcfunction'.format(datapack_name), "\n".join(tick_function_list))
 zip.writestr('data/{}/functions/debug.mcfunction'.format(datapack_name), "\n".join(debug_function_list))
 	

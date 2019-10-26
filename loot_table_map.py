@@ -10,18 +10,28 @@ from loot_table import LootTable, eLootTable
 from entry import Entry, ItemEntry, LootTableEntry, eEntry
 from display import eFrame
 from condition import Condition, eCondition
+from display import eFrame
 
 from re_helper import get_upper_selector
 
 class eAdvItemType(str, Enum):
-	root		= 'task'
-	block		= 'task'
-	root_table	= 'goal'
-	reference	= 'goal'
-	loop		= 'goal'
-	special		= 'goal'
-	item		= 'challenge'
-	tab			= 'challenge'
+	root		= 'root'
+	block		= 'block'
+	root_table	= 'root_table'
+	reference	= 'reference'
+	loop		= 'loop'
+	special		= 'special'
+	item		= 'item'
+	tab			= 'tab'
+
+	def get_frame(self):
+		if self is eAdvItemType.root or self is eAdvItemType.block:
+			return eFrame.task
+		if self is eAdvItemType.root_table or self is eAdvItemType.reference or self is eAdvItemType.loop or self is eAdvItemType.special:
+			return eFrame.goal
+		if self is eAdvItemType.item or self is eAdvItemType.tab:
+			return eFrame.challenge
+
 
 
 class AdvItem(dict):
@@ -82,35 +92,32 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 
 		if adv_link.selector.startswith('potted'):
 			adv_link.item_selector = adv_link.selector.replace('potted_', '')
-			adv_link.description = 'Break a {}'.format(get_upper_selector(adv_link.selector))
 
 		elif adv_link.selector in ['pumpkin_stem', 'attached_pumpkin_stem', 'melon_stem', 'attached_melon_stem']:
 			adv_link.item_selector = adv_link.selector.replace('attached_', '').replace('_stem', '_seeds')
-			adv_link.description = 'Break a {}'.format(get_upper_selector(adv_link.item_selector))
+			if adv_link.selector.startswith('attached'):
+				adv_link.adv_item_type = prev_type
 
 		elif adv_link.selector in ['beetroots', 'carrots']:
 			adv_link.item_selector = adv_link.selector[:-1]
-			adv_link.description = 'Grow {}'.format(get_upper_selector(adv_link.selector))
 
 		elif adv_link.selector == 'potatoes':
 			adv_link.item_selector = 'potato'
-			adv_link.description = 'Grow {}'.format(get_upper_selector(adv_link.selector))
 
 		elif adv_link.selector == 'bamboo_sapling':
 			adv_link.item_selector = 'bamboo'
-			adv_link.description = 'Break a Bamboo Sapling'
 
 		elif adv_link.selector == 'cocoa':
 			adv_link.item_selector = 'cocoa_beans'
-			adv_link.description = 'Grow {}'.format(get_upper_selector(adv_link.item_selector))
 
 		elif adv_link.selector == 'frosted_ice':
 			adv_link.item_selector = 'ice'
-			adv_link.description = 'Shatter Frosted Ice'
+			adv_link.description = 'Shatter Ice From Frost Walking'
+			adv_link.adv_item_type = prev_type
 
 		elif adv_link.selector == 'kelp_plant':
 			adv_link.item_selector = 'kelp'
-			adv_link.description = 'Break a Kelp Plant'
+			adv_link.description = 'Harvest a Kelp Plant'
 
 		elif adv_link.selector == 'redstone_wire':
 			adv_link.item_selector = 'redstone'
@@ -120,7 +127,6 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 
 		elif adv_link.selector == 'sweet_berry_bush':
 			adv_link.item_selector = 'sweet_berries'
-			adv_link.description = 'Break a Sweet Berry Bush'
 
 		elif adv_link.selector == 'tall_seagrass':
 			adv_link.item_selector = 'seagrass'
@@ -129,7 +135,7 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 			adv_link.adv_item_type = prev_type
 
 		if adv_link.description is None:
-			adv_link.description = 'Break {}'.format(get_upper_selector(adv_link.selector))
+			adv_link.description = 'Collect or Break This Block'
 
 	elif loot_table_map.original.typ is eLootTable.entity:
 		if adv_link.selector == 'sheep' or 'sheep' in loot_table_map.path:
@@ -138,8 +144,10 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 				adv_link.title = '{} Sheep'.format(get_upper_selector(adv_link.selector))
 				adv_link.description = 'Kill a {} Sheep'.format(get_upper_selector(adv_link.selector))
 			else:
-				adv_link.description = 'The Sheep Loot Table'
-				adv_link.adv_item_type = eAdvItemType.root_table
+				adv_link.title = 'The Sheep Loot Table'
+				adv_link.description = 'Collect Items From This Loot Table'
+				if adv_link.adv_item_type is eAdvItemType.root:
+					adv_link.adv_item_type = eAdvItemType.root_table
 
 		elif adv_link.selector == 'ender_dragon':
 			adv_link.item_selector = 'dragon_head'
@@ -153,7 +161,7 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 			adv_link.item_selector = 'iron_ingot'
 
 		elif adv_link.selector == 'snow_golem':
-			adv_link.item_selector = 'snow_ball'
+			adv_link.item_selector = 'snowball'
 
 		elif adv_link.selector == 'giant':
 			adv_link.item_selector = 'zombie_spawn_egg'
@@ -197,8 +205,10 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 		if adv_link.selector == 'fishing':
 			adv_link.description = 'Go Fishing'
 		else:
-			adv_link.description = 'The {} Loot Table'.format(get_upper_selector(adv_link.selector))
-			adv_link.adv_item_type = eAdvItemType.root_table
+			adv_link.title = 'The {} Loot Table'.format(get_upper_selector(adv_link.selector))
+			adv_link.description = 'Collect Items From This Loot Table'
+			if adv_link.adv_item_type is eAdvItemType.root:
+				adv_link.adv_item_type = eAdvItemType.root_table
 
 
 	elif loot_table_map.original.typ is eLootTable.advancement_reward:
@@ -207,7 +217,7 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 
 	elif loot_table_map.original.typ is eLootTable.generic:
 		adv_link.item_selector = 'chest'
-		adv_link.description = 'An Generic Loot table'
+		adv_link.description = 'A Generic Loot table'
 
 	elif loot_table_map.original.typ is eLootTable.gift:
 		if adv_link.selector.startswith('armorer'):
@@ -293,7 +303,7 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 		current_map.remapped.interact(MCActionInfo(eItemType.Entry, collect, eActionType.Interact))
 		found_link = False
 
-		special_link = AdvItem.populate(current_map.remap_selector, eAdvItemType.block)
+		special_link = AdvItem.populate(current_map.remap_selector, eAdvItemType.root)
 		fix_selector(special_link, loot_table_maps[current_map.remap_selector])
 		if special_link.adv_item_type == eAdvItemType.special:
 			last_link = special_link

@@ -10,4 +10,5 @@ def get_upper_selector(selector):
 	return re.sub(r'((^|_)[a-z])', upper, selector)
 
 def shorten_selector(selector):
-	return re.sub(r'([a-z]{3})[a-z]*(_|$)', r'\1\2', selector)
+	new_selector = re.sub(r'[_]', '', selector)
+	return re.sub(r'([a-z]{10}).*$', r'\1', new_selector)
