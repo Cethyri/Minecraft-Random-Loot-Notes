@@ -21,21 +21,66 @@ from entity import Entity
 from re_helper import fix_a_an, get_upper_selector, shorten_selector
 from mc_helper import MCActionInfo, eItemType, eActionType
 
-if len(sys.argv) >= 2:
-	try:
-		seed = int(sys.argv[1])
-	except Exception:
-		print('The seed "{}" is not an integer.'.format(sys.argv[1]))
-		exit()
+requires_cheats = [
+	'giant',
+	'illusioner'
+]
+
+flags = {
+	'hardcore': False,
+	'no-cheats': False,
+	'no-dead-ends': False,
+	#'fill-dead-ends': False,
+	#'hints': False,
+	#'loot-hints': False,
+	#'empty-loot-hints': False,
+	'save-seed': False,
+	'hide-seed': False
+}
+
+if len(sys.argv) > 1:
+	argstart = 1
+	seed_given = False
+	if not sys.argv[1].startswith('--'):
+		argstart = 2
+		try:
+			seed = int(sys.argv[1])
+			seed_given = True
+		except Exception:
+			print('The seed "{}" is not an integer.'.format(sys.argv[1]))
+			exit()
+
+	for i in range(argstart, len(sys.argv)):
+		arg = sys.argv[i].replace('--', '', 1)
+		if arg in flags:
+			flags[arg] = True
+		else:
+			print('{} is not a recognized flag, ignoring...'.format(arg))
+
+if seed_given:	
 	random.seed(seed)
 	datapack_name = 'rand_loot_adv_tree_{}'.format(seed)
 	datapack_desc = 'Loot Table Randomizer Advancement Tree, Seed: {}'.format(seed)
 else:
-	print('If you want to use a specific randomizer seed integer, use: "python randomize.py <seed>"')
-	datapack_name = 'rand_loot_adv_tree'
-	datapack_desc = 'Loot Table Randomizer Advancement Tree'
+	if not seed_given:
+		seed = random.randint(-sys.maxsize, sys.maxsize)
+		if not flags['save-seed']:
+			print('If you want to use a specific randomizer seed integer, use: "python randomize.py <seed>".')
+
+	if (seed_given and not flags['hide-seed']) or (flags['save-seed'] and not seed_given):
+		datapack_name = 'rand_loot_adv_tree_{}'.format(seed)
+		datapack_desc = 'Loot Table Randomizer Advancement Tree, Seed: {}'.format(seed)
+	else:
+		datapack_name = 'rand_loot_adv_tree'
+		datapack_desc = 'Loot Table Randomizer Advancement Tree'
+
+if all(not flags[key] for key in flags):
+	print('Customization is available through flags. If you would like to see a list of flags use: "python rlat_help.py')
 	
 datapack_filename = datapack_name + '.zip'
+
+
+print(flags)
 
 
 print('Generating datapack...')
@@ -43,32 +88,73 @@ print('Generating datapack...')
 loot_table_maps: Dict[str, LootTableMap] = {}
 remaining_selectors: List[str] = []
 
+
+update_pre_randomized = os._exists('randomized')
+
+selectors_to_remapped = {}
+original_to_selector = {}
+
+
+print('Loading Tables...')
+
 def load_table_info():
+	if update_pre_randomized:
+		for dirpath, _dirnames, filenames in os.walk('randomized'):
+			for filename in filenames:
+				selector = filename.replace('.json', '')
+
+				with open(os.path.join(dirpath, filename)) as json_file:
+					selectors_to_remapped[selector] = json_file
+
 	for dirpath, _dirnames, filenames in os.walk('loot_tables'):
 		for filename in filenames:
 			selector = filename.replace('.json', '')
 			path = dirpath.replace('loot_tables\\', '').split('\\')
+
+			if update_pre_randomized and selector not in selectors_to_remapped:
+				continue
+
+			if selector == 'player' and flags['hardcore']:
+				continue
+
+			if selector in requires_cheats and flags['no-cheats']:
+				continue
+
 			with open(os.path.join(dirpath, filename)) as json_file:
+				original_to_selector[json_file] = selector
 				json_dict = json.load(json_file)
-				if selector == 'guardian':
-					pass
 				loot_table = LootTable(json_dict)
+
+			if len(loot_table.pools) == 0 and flags['no-dead-ends']:
+				continue
+
 			loot_table_maps[selector] = LootTableMap(selector, path, loot_table)
 			remaining_selectors.append(selector)
 load_table_info()
 
 
-print('Randomizing drops...')
+if update_pre_randomized:
+	print('Maping pre-randomized tables...')
+else:
+	print('Randomizing drops...')
 
 #For Randomization to match Sethbling's the python version must be 3.6+ (For ordered dictionaries)
 def randomize():
-	for selector in loot_table_maps:
-		i = random.randrange(0, len(remaining_selectors))
-		loot_table_maps[selector].remapped = LootTable(json.loads(json.dumps(loot_table_maps[remaining_selectors[i]].original)))
-		loot_table_maps[selector].remap_selector = remaining_selectors[i]
-		if loot_table_maps[selector].remap_selector == 'tall_grass':
-			print(selector)
-		del remaining_selectors[i]
+	if update_pre_randomized:
+		for selector in loot_table_maps:
+			remapped_json = selectors_to_remapped[selector]
+			remapped_selector = original_to_selector[remapped_json]
+			remapped_table = loot_table_maps[remapped_selector].original
+			loot_table_maps[selector].remap_selector = remapped_selector
+			loot_table_maps[selector].remapped = LootTable(json.loads(json.dumps(remapped_table)))
+
+	else:
+		for selector in loot_table_maps:
+			i = random.randrange(0, len(remaining_selectors))
+			remapped_table = loot_table_maps[remaining_selectors[i]].original
+			loot_table_maps[selector].remap_selector = remaining_selectors[i]
+			loot_table_maps[selector].remapped = LootTable(json.loads(json.dumps(remapped_table))) #Deep Copy
+			del remaining_selectors[i]
 randomize()
 
 
