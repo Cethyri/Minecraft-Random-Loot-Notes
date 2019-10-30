@@ -112,7 +112,7 @@ def interact_with_items(parent, subscript, info: MCActionInfo):
 		interaction_result = interact_with_item(items, i, info)
 		if info.short_curcuit == True:
 			return
-		if info.action_type != eActionType.Delete:
+		if info.action_type != eActionType.Delete or interaction_result:
 			if interaction_result:
 				info.depth += 1
 				items[i].interact(info)

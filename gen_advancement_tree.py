@@ -89,7 +89,11 @@ loot_table_maps: Dict[str, LootTableMap] = {}
 remaining_selectors: List[str] = []
 
 
-update_pre_randomized = os._exists('randomized')
+update_pre_randomized = os.path.exists('randomized')
+if update_pre_randomized:
+	datapack_name = '{}_upd'.format(datapack_name)
+	datapack_desc = '{}_upd'.format(datapack_desc)
+	datapack_filename = datapack_name + '.zip'
 
 selectors_to_remapped = {}
 original_to_selector = {}
@@ -104,7 +108,7 @@ def load_table_info():
 				selector = filename.replace('.json', '')
 
 				with open(os.path.join(dirpath, filename)) as json_file:
-					selectors_to_remapped[selector] = json_file
+					selectors_to_remapped[selector] = json_file.read().replace('\n', '')
 
 	for dirpath, _dirnames, filenames in os.walk('loot_tables'):
 		for filename in filenames:
@@ -121,11 +125,12 @@ def load_table_info():
 				continue
 
 			with open(os.path.join(dirpath, filename)) as json_file:
-				original_to_selector[json_file] = selector
-				json_dict = json.load(json_file)
+				json_text = json_file.read().replace('\n', '')
+				original_to_selector[json_text] = selector
+				json_dict = json.loads(json_text)
 				loot_table = LootTable(json_dict)
 
-			if len(loot_table.pools) == 0 and flags['no-dead-ends']:
+			if ('pools' not in loot_table or len(loot_table.pools) == 0) and flags['no-dead-ends']:
 				continue
 
 			loot_table_maps[selector] = LootTableMap(selector, path, loot_table)
@@ -138,15 +143,43 @@ if update_pre_randomized:
 else:
 	print('Randomizing drops...')
 
+def is_killed_by_player(condition: Condition, info: MCActionInfo):
+	return condition.condition == eCondition.killed_by_player
+
 #For Randomization to match Sethbling's the python version must be 3.6+ (For ordered dictionaries)
 def randomize():
 	if update_pre_randomized:
+		outdated = {}
+
 		for selector in loot_table_maps:
 			remapped_json = selectors_to_remapped[selector]
-			remapped_selector = original_to_selector[remapped_json]
-			remapped_table = loot_table_maps[remapped_selector].original
-			loot_table_maps[selector].remap_selector = remapped_selector
-			loot_table_maps[selector].remapped = LootTable(json.loads(json.dumps(remapped_table)))
+
+			if remapped_json not in original_to_selector:
+				print('checking if {} remapped is outdated version of a current loot_table'.format(selector))
+				for ood_remapped_selector in loot_table_maps:
+					if ood_remapped_selector not in outdated:
+						original_table = loot_table_maps[ood_remapped_selector].original
+
+						outdated[ood_remapped_selector] = {
+							'new_table': LootTable(json.loads(json.dumps(original_table))), #Deep Copy
+							'out_of_date_table': LootTable(json.loads(remapped_json))
+						}
+						
+						outdated[ood_remapped_selector]['new_table'].interact(MCActionInfo(eItemType.Condition, is_killed_by_player, eActionType.Delete))
+
+					if outdated[ood_remapped_selector]['out_of_date_table'] == outdated[ood_remapped_selector]['new_table']:
+						remapped_selector = ood_remapped_selector
+						remapped_table = original_table
+						break
+			else:
+				remapped_selector = original_to_selector[remapped_json]
+				remapped_table = loot_table_maps[remapped_selector].original
+
+			if remapped_selector and remapped_table:
+				loot_table_maps[selector].remap_selector = remapped_selector
+				loot_table_maps[selector].remapped = LootTable(json.loads(json.dumps(remapped_table))) #Deep Copy
+			else:
+				print('failed to find matching table for {}'.format(selector))
 
 	else:
 		for selector in loot_table_maps:

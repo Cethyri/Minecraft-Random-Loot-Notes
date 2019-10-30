@@ -1,9 +1,9 @@
 1.14.4
-oot_is_dead_datapack
-loot_tables
+oot_is_dead_datapack/*
+loot_tables/*
 __pycache__
 
-rand_loot_adv_tree
+rand_loot_adv_tree/*
 rand_loot_adv_tree.zip
 
 rand_loot_adv_tree_*
@@ -14,3 +14,5 @@ rand_loot_adv_tree_*.zip
 test.json
 test.py
 restrictions/*
+randomized/*
+loot_tables_modified/*
