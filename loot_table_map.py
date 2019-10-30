@@ -9,7 +9,7 @@ from mc_helper import MCDict, mc_property, MCActionInfo, eItemType, eActionType
 from loot_table import LootTable, eLootTable
 from entry import Entry, ItemEntry, LootTableEntry, eEntry
 from display import eFrame
-from condition import Condition, eCondition
+from condition import Condition, eCondition, eRestriction, get_restriction_level
 from display import eFrame
 
 from re_helper import get_upper_selector
@@ -20,14 +20,14 @@ class eAdvItemType(str, Enum):
 	root_table	= 'root_table'
 	reference	= 'reference'
 	loop		= 'loop'
-	special		= 'special'
+	from_items	= 'from_items'
 	item		= 'item'
 	tab			= 'tab'
 
 	def get_frame(self):
 		if self is eAdvItemType.root or self is eAdvItemType.block:
 			return eFrame.task
-		if self is eAdvItemType.root_table or self is eAdvItemType.reference or self is eAdvItemType.loop or self is eAdvItemType.special:
+		if self is eAdvItemType.root_table or self is eAdvItemType.reference or self is eAdvItemType.loop or self is eAdvItemType.from_items:
 			return eFrame.goal
 		if self is eAdvItemType.item or self is eAdvItemType.tab:
 			return eFrame.challenge
@@ -88,7 +88,7 @@ def create_adv_item(entry: Union[LootTableEntry, ItemEntry], loot_table_maps) ->
 def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 	if loot_table_map.original.typ is eLootTable.block:
 		prev_type = adv_link.adv_item_type
-		adv_link.adv_item_type = eAdvItemType.special
+		adv_link.adv_item_type = eAdvItemType.from_items
 
 		if adv_link.selector.startswith('potted'):
 			adv_link.item_selector = adv_link.selector.replace('potted_', '')
@@ -130,6 +130,9 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 
 		elif adv_link.selector == 'tall_seagrass':
 			adv_link.item_selector = 'seagrass'
+
+		elif adv_link.selector == 'tall_grass':
+			pass #assure tall grass registers as obtainable
 
 		else:
 			adv_link.adv_item_type = prev_type
@@ -303,10 +306,10 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 		current_map.remapped.interact(MCActionInfo(eItemType.Entry, collect, eActionType.Interact))
 		found_link = False
 
-		special_link = AdvItem.populate(current_map.remap_selector, eAdvItemType.root)
-		fix_selector(special_link, loot_table_maps[current_map.remap_selector])
-		if special_link.adv_item_type == eAdvItemType.special:
-			last_link = special_link
+		from_items_link = AdvItem.populate(current_map.remap_selector, eAdvItemType.root)
+		fix_selector(from_items_link, loot_table_maps[current_map.remap_selector])
+		if from_items_link.adv_item_type == eAdvItemType.from_items:
+			last_link = from_items_link
 			next_selector = current_map.remap_selector
 			found_link = True
 
@@ -349,9 +352,9 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 			else:
 				advancement_chain.append(last_link)
 
-def create_variety(valid_conditions: Dict[eCondition, List[Condition]]):
+def create_variety(original_conditions: Dict[eCondition, List[Condition]]):
 	variety_tracker = {}
-	for typ, conditions in valid_conditions.items():
+	for typ, conditions in original_conditions.items():
 		variety_tracker[typ] = list(range(0, len(conditions)))
 		random.shuffle(variety_tracker[typ])
 	return variety_tracker
@@ -359,43 +362,58 @@ def create_variety(valid_conditions: Dict[eCondition, List[Condition]]):
 
 class Ref():
 	variety_tracker = {}
-	valid_condition_count = 0
+	original_condition_count = 0
 	validate_conditions: {}
 
-
-def validate_conditions(loot_table_map: LootTableMap):
-	if loot_table_map.remapped.typ is loot_table_map.original.typ and loot_table_map.selector != 'player' and loot_table_map.selector != 'armor_stand':
-		return
-
-	loot_table_map.remapped.typ = loot_table_map.original.typ
-
-	Ref.valid_conditions = {}
-	Ref.valid_condition_count = 0
+def validate_conditions(loot_table_map: LootTableMap, conditions: Dict[str, Condition]):
+	Ref.original_conditions = {}
+	Ref.original_condition_count = 0
 
 	def collect(condition: Condition, info: MCActionInfo):
-		# if info.depth not in valid_conditions:
-		# 	valid_conditions
+		# if info.depth not in original_conditions:
+		# 	original_conditions
 		# if condition.condition not in valid_condition_types:
-		# 	all_valid_conditions.append(condition)
-		if condition.condition not in Ref.valid_conditions:
-			Ref.valid_conditions[condition.condition] = []
-		Ref.valid_conditions[condition.condition].append(condition)
-		Ref.valid_condition_count += 1
+		# 	all_original_conditions.append(condition)
+		if condition.condition not in Ref.original_conditions:
+			Ref.original_conditions[condition.condition] = []
+		Ref.original_conditions[condition.condition].append(condition)
+		Ref.original_condition_count += 1
 
 	loot_table_map.original.interact(MCActionInfo(eItemType.Condition, collect, eActionType.Interact))
 	
-	Ref.variety_tracker = create_variety(Ref.valid_conditions)
+	Ref.variety_tracker = create_variety(Ref.original_conditions)
 	condition_maps = []
 
 	def validate(condition: Condition, info) -> Condition:
-		valid_condition_type = condition.condition in Ref.valid_conditions
+		restriction_level = get_restriction_level(condition)
+		restricted = True
+
+		if restriction_level is eRestriction.none:
+			restricted = False
+
+		elif restriction_level is eRestriction.type_specific:
+			restricted = not loot_table_map.remapped.typ == loot_table_map.original.typ
+
+		elif restriction_level is eRestriction.table_specific:
+			restricted = not loot_table_map.selector == loot_table_map.remap_selector
+
+		elif restriction_level is eRestriction.dont_validate:
+			restricted = False
+
 		condition_type = condition.condition
-		if valid_condition_type and condition in Ref.valid_conditions[condition.condition]:
+		condition_type_in_original = condition_type in Ref.original_conditions
+
+		if not restricted:
 			return None
-		elif valid_condition_type:
-			for condition_map in condition_maps:
-				if condition_map['old'] == condition:
-					return condition_map['new']
+
+		elif condition_type_in_original:
+			if condition in Ref.original_conditions[condition.condition]:
+				return None
+
+			else:
+				for condition_map in condition_maps:
+					if condition_map['original'] == condition:
+						return condition_map['remapped']
 
 		if condition_type not in Ref.variety_tracker:
 			condition_type = random.choice(list(Ref.variety_tracker))
@@ -406,19 +424,20 @@ def validate_conditions(loot_table_map: LootTableMap):
 			del Ref.variety_tracker[condition_type]
 
 			if len(list(Ref.variety_tracker)) == 0:
-				Ref.variety_tracker = create_variety(Ref.valid_conditions)
+				Ref.variety_tracker = create_variety(Ref.original_conditions)
 
-		newCondition = Ref.valid_conditions[condition_type][condition_index]
+		newCondition = Ref.original_conditions[condition_type][condition_index]
 
 		condition_maps.append({
-			'old': condition,
-			'new': newCondition
+			'original': condition,
+			'remapped': newCondition
 		})
 
 		return newCondition
 
-	if Ref.valid_condition_count == 0:
+	if Ref.original_condition_count == 0:
 		loot_table_map.remapped.interact(MCActionInfo(eItemType.Condition, lambda condition, info: True, eActionType.Delete))
 	else:
 		loot_table_map.remapped.interact(MCActionInfo(eItemType.Condition, validate, eActionType.Set))
 
+	loot_table_map.remapped.typ = loot_table_map.original.typ

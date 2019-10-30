@@ -6,17 +6,20 @@ import json
 import sys
 import math
 
+from enum import Enum
 from typing import Dict, List, Callable
 
 from loot_table_map import LootTableMap, populate_advancement_chain, AdvItem, eAdvItemType, validate_conditions
 from loot_table import LootTable, eLootTable
 from advancement import Advancement, Rewards
+from condition import Condition, eCondition, eRestriction, get_restriction_level
 from display import Display, Icon, TextComponent
 from criteria import Criteria, eTrigger, InventoryChanged, Impossible, PlayerKilledEntity, EntityKilledPlayer, FishingRodHooked
 from item import Item
 from entity import Entity
 
 from re_helper import fix_a_an, get_upper_selector, shorten_selector
+from mc_helper import MCActionInfo, eItemType, eActionType
 
 if len(sys.argv) >= 2:
 	try:
@@ -63,16 +66,33 @@ def randomize():
 		i = random.randrange(0, len(remaining_selectors))
 		loot_table_maps[selector].remapped = LootTable(json.loads(json.dumps(loot_table_maps[remaining_selectors[i]].original)))
 		loot_table_maps[selector].remap_selector = remaining_selectors[i]
+		if loot_table_maps[selector].remap_selector == 'tall_grass':
+			print(selector)
 		del remaining_selectors[i]
 randomize()
 
 
 print('Validating loot tables...')
 
+conditions = {
+	eRestriction.none: [],
+	eRestriction.type_specific: [],
+	eRestriction.table_specific: [],
+	eRestriction.dont_validate: [],
+	eRestriction.other: []
+}
+
+def collect_conditions(condition: Condition, info: MCActionInfo):
+	restriction = get_restriction_level(condition)
+
+	if condition not in conditions[restriction]:
+		conditions[restriction].append(condition)
+
 def validate():
 	for selector in loot_table_maps:
 		# print('Validating: {}'.format(selector))
-		validate_conditions(loot_table_maps[selector])
+		loot_table_maps[selector].remapped.interact(MCActionInfo(eItemType.Condition, collect_conditions, eActionType.Interact))
+		validate_conditions(loot_table_maps[selector], conditions)
 validate()
 		
 
@@ -89,6 +109,9 @@ populate()
 
 
 print('Generating Advancements...')
+
+with open('double_tall_blocks.json') as json_file:
+	double_tall_blocks = json.load(json_file)
 		
 tabs_possible_images: Dict[str, List[str]] = {}
 tabs: List[str] = []
@@ -153,7 +176,6 @@ def generate_children_functions(pathed_selector: str, start_link: AdvItem, path:
 	
 	functions[pathed_selector].append('scoreboard players set @s incomplete 0')
 	functions[pathed_selector].append('scoreboard players set @s complete 0')
-	functions[pathed_selector].append('summon cat')
 			
 	references = []
 	search_queue = [start_link]
@@ -178,7 +200,7 @@ def generate_children_functions(pathed_selector: str, start_link: AdvItem, path:
 		branches = []
 		if cur_link.selector in current_map.adv_branches:
 			branches.extend(current_map.adv_branches[cur_link.selector])
-		if len(current_map.adv_chain) > 1 and current_map.adv_chain[1].adv_item_type is not eAdvItemType.special:
+		if len(current_map.adv_chain) > 1 and current_map.adv_chain[1].adv_item_type is not eAdvItemType.from_items:
 			branches.append(current_map.adv_chain[1])
 
 		for adv_child in branches:
@@ -245,6 +267,20 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 		]
 
 		grant_target_selector = ''
+		
+	elif adv_link.selector in double_tall_blocks:
+		for i in range(10):
+			score = i + 1
+			distance = score / 2
+			tick_function_list.append('execute as @a[scores = {{ {0} = 0 }}] at @s anchored eyes if block ^ ^ ^{1} minecraft:{2} run scoreboard players set @s {0} {3}'.format(objective_name, distance, adv_link.selector, score))
+			tick_function_list.append('execute as @a[scores = {{ {0} = {3} }}] at @s anchored eyes unless block ^ ^ ^{1} minecraft:{2} positioned ^ ^ ^{1} run function {4}'.format(objective_name, distance, adv_link.selector, score, namespaced_selector))
+			
+		execute_conditions_list = [
+			lambda adv_child: 'unless block ~ ~ ~ minecraft:{} if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_link.selector, adv_child.item_selector)
+		]
+		
+		reset_objective = True
+		grant_target_selector = ''
 
 	elif loot_table_map.original.typ is eLootTable.block:
 		objective_criteria = 'minecraft.mined:minecraft.{}'.format(adv_link.selector)
@@ -268,7 +304,7 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 			tick_function_list.append('execute as @a[scores = {{ {0} = {3} }}] at @s anchored eyes unless block ^ ^ ^{1} minecraft:chest{{ LootTable: "minecraft:{2}" }} positioned ^ ^ ^{1} run function {4}'.format(objective_name, distance, loot_table_pathed_selector, score, namespaced_selector))
 			
 		execute_conditions_list = [
-			lambda adv_child: 'if block ~ ~ ~ chest{{ Items: [{{ id: "minecraft:{}" }}] }}'.format(adv_child.item_selector)
+			lambda adv_child: 'if block ~ ~ ~ minecraft:chest{{ Items: [{{ id: "minecraft:{}" }}] }}'.format(adv_child.item_selector)
 		]
 		
 		reset_objective = True
@@ -382,12 +418,12 @@ def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespa
 
 	advancement.display = Display.populate(
 		icon		= item_selector,
-		title		= adv_link.title if (adv_link.title is not None) else cap_name,
+		title		= adv_link.title if adv_link.title is not None else cap_name,
 		description = adv_link.description if (adv_link.description is not None) else 'No Description',
 		frame		= adv_link.adv_item_type.get_frame(),
 		show		= True,
 		announce	= True,
-		hidden		= hidden
+		hidden		= False #hidden
 	)
 
 	if namespaced_parent_selector is not None:
@@ -397,7 +433,7 @@ def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespa
 	advancements[pathed_selector] = advancement
 
 	if gen_base_criteria:
-		if (adv_link.adv_item_type is eAdvItemType.block or adv_link.adv_item_type is eAdvItemType.special or adv_link.selector == 'armor_stand') and adv_link.selector == adv_link.item_selector:
+		if (adv_link.adv_item_type is eAdvItemType.block or adv_link.adv_item_type is eAdvItemType.from_items or adv_link.selector == 'armor_stand') and adv_link.selector == adv_link.item_selector:
 			conditions = InventoryChanged()
 			conditions.req_items = [ Item.populate(item_id = item_selector) ]
 			advancement.criteria = { 'collect': Criteria.populate(eTrigger.inventory_changed, conditions) }
@@ -431,7 +467,7 @@ def get_parent_tab(loot_table_map: LootTableMap):
 		return 'no_parent'
 
 def set_child_description(adv_link: AdvItem, adv_child: AdvItem):
-	link_name = adv_link.title
+	link_name = adv_link.title if adv_link.title is not None else get_upper_selector(adv_link.selector)
 	child_name = get_upper_selector(adv_child.selector)
 
 	loot_table_map = loot_table_maps[adv_link.selector]
@@ -495,7 +531,7 @@ def generate_advancements(loot_table_map: LootTableMap):
 	first_path = get_pathed_selector(loot_table_map.selector, path, base, 0)
 	pathed_selector = first_path
 
-	special_length = 0
+	from_items_length = 0
 	child_pathed_parent = None
 
 	for link_index in range(0, len(loot_table_map.adv_chain)):
@@ -503,9 +539,9 @@ def generate_advancements(loot_table_map: LootTableMap):
 
 		adv_link = loot_table_map.adv_chain[link_index]
 
-		if adv_link.adv_item_type is eAdvItemType.special and child_pathed_parent is not None:
-			loot_table_map.adv_length += special_length
-			special_length = 0
+		if adv_link.adv_item_type is eAdvItemType.from_items and child_pathed_parent is not None:
+			loot_table_map.adv_length += from_items_length
+			from_items_length = 0
 			pathed_parent = child_pathed_parent
 
 		pathed_selector = get_pathed_selector(adv_link.selector, path, base, link_index)
@@ -534,7 +570,7 @@ def generate_advancements(loot_table_map: LootTableMap):
 				generate_single_advancement(adv_child, child_pathed_selector, child_pathed_parent)
 
 				child_pathed_parent = get_namespaced_selector(child_pathed_selector)
-				special_length += 1
+				from_items_length += 1
 				if split:
 					column += 1
 					loot_table_map.adv_length += 0.5
@@ -608,5 +644,9 @@ zip.writestr('data/{}/functions/debug.mcfunction'.format(datapack_name), "\n".jo
 zip.close()
 with open(datapack_filename, 'wb') as file:
 	file.write(zipbytes.getvalue())
-	
+
+# for key in conditions:
+# 	with open(os.path.join('restrictions', '{}.json'.format(key.name)), 'wt') as file:
+# 		file.write(json.dumps(conditions[key]))
+		
 print('Created datapack "{}"'.format(datapack_filename))
