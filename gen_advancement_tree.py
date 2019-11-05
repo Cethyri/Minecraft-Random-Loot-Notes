@@ -28,19 +28,22 @@ requires_cheats = [
 
 flags = {
 	'hardcore': False,
+	'update': False,
 	'no-cheats': False,
 	'no-dead-ends': False,
 	#'fill-dead-ends': False,
 	#'hints': False,
 	#'loot-hints': False,
 	#'empty-loot-hints': False,
+	#'show-next': False,
+	#'show-no-drops': False,
 	'save-seed': False,
 	'hide-seed': False
 }
 
+seed_given = False
 if len(sys.argv) > 1:
 	argstart = 1
-	seed_given = False
 	if not sys.argv[1].startswith('--'):
 		argstart = 2
 		try:
@@ -89,7 +92,7 @@ loot_table_maps: Dict[str, LootTableMap] = {}
 remaining_selectors: List[str] = []
 
 
-update_pre_randomized = os.path.exists('randomized')
+update_pre_randomized = os.path.exists('randomized') and flags['update']
 if update_pre_randomized:
 	datapack_name = '{}_upd'.format(datapack_name)
 	datapack_desc = '{}_upd'.format(datapack_desc)
@@ -155,7 +158,7 @@ def randomize():
 			remapped_json = selectors_to_remapped[selector]
 
 			if remapped_json not in original_to_selector:
-				print('checking if {} remapped is outdated version of a current loot_table'.format(selector))
+				#print('checking if {} remapped is outdated version of a current loot_table'.format(selector))
 				for ood_remapped_selector in loot_table_maps:
 					if ood_remapped_selector not in outdated:
 						original_table = loot_table_maps[ood_remapped_selector].original
@@ -525,8 +528,8 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 
 	functions[pathed_selector].append('advancement grant @s{} only {}'.format(grant_target_selector, namespaced_selector))
 	functions[pathed_selector].append('scoreboard players reset @s[scores = {{ incomplete = 0 }}] {}'.format(objective_name))
-	functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
-	functions[pathed_selector].append('execute as @s[scores = {{ complete = 1.. }}] run say @s got {}'.format(namespaced_selector))
+	# functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
+	# functions[pathed_selector].append('execute as @s[scores = {{ complete = 1.. }}] run say @s got {}'.format(namespaced_selector))
 
 def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: str, hidden: bool = True, gen_base_criteria: bool = True):
 	selector = adv_link.selector
@@ -542,7 +545,7 @@ def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespa
 		frame		= adv_link.adv_item_type.get_frame(),
 		show		= True,
 		announce	= True,
-		hidden		= False #hidden
+		hidden		= hidden
 	)
 
 	if namespaced_parent_selector is not None:
@@ -552,12 +555,13 @@ def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespa
 	advancements[pathed_selector] = advancement
 
 	if gen_base_criteria:
-		if (adv_link.adv_item_type is eAdvItemType.block or adv_link.adv_item_type is eAdvItemType.from_items or adv_link.selector == 'armor_stand') and adv_link.selector == adv_link.item_selector:
-			conditions = InventoryChanged()
-			conditions.req_items = [ Item.populate(item_id = item_selector) ]
-			advancement.criteria = { 'collect': Criteria.populate(eTrigger.inventory_changed, conditions) }
-		else:
-			advancement.criteria = { 'get': Criteria.populate(eTrigger.impossible) }
+		# if (adv_link.adv_item_type is eAdvItemType.block or adv_link.adv_item_type is eAdvItemType.from_items or adv_link.selector == 'armor_stand') and adv_link.selector == adv_link.item_selector:
+		# 	conditions = InventoryChanged()
+		# 	conditions.req_items = [ Item.populate(item_id = item_selector) ]
+		# 	advancement.criteria = { 'collect': Criteria.populate(eTrigger.inventory_changed, conditions) }
+		# else:
+		# 	advancement.criteria = { 'get': Criteria.populate(eTrigger.impossible) }
+		advancement.criteria = { 'get': Criteria.populate(eTrigger.impossible) }
 
 def get_parent_tab(loot_table_map: LootTableMap):
 	if loot_table_map.original.typ is eLootTable.advancement_reward:
@@ -725,12 +729,25 @@ for loot_table_map in loot_table_maps.values():
 # print('{} trees'.format(count))
 
 debug_function_list = ['advancement revoke @a everything']
+used_image_selectors = []
 for tab in tabs:
 	tab_selector = get_pathed_selector(tab, '', '', -1)
-	adv_tab = AdvItem.populate(tab, eAdvItemType.tab, random.choice(tabs_possible_images[tab]))
+	temp_possible_images = tabs_possible_images[tab]
+	random.shuffle(temp_possible_images)
+	while True:
+		image_selector = temp_possible_images.pop()
+		if image_selector not in used_image_selectors or len(temp_possible_images) == 0:
+			break
+
+	title = 'Random Loot: {}'.format(get_upper_selector(image_selector))
+	additional = used_image_selectors.count(image_selector) - 1
+	if additional > 0:
+		title = '{} {}'.format(title, additional)
+	adv_tab = AdvItem.populate(tab, eAdvItemType.tab, image_selector, title, 'A Random Loot Tab')
 	generate_single_advancement(adv_tab, tab_selector, None, False, False)
 	advancements[tab_selector].criteria = {'randomize_your_world': Criteria.populate(eTrigger.impossible)}
-	debug_function_list.append('advancement grant @a from rand_loot_adv_tree_1:{}'.format(tab))
+	debug_function_list.append('advancement grant @a from {}:{}'.format(datapack_name, tab_selector))
+	reset_function_list.append('advancement grant @a only {}:{}'.format(datapack_name, tab_selector))
 
 print('Writing Files...')
 # Create Files
