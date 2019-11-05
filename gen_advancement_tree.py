@@ -62,8 +62,8 @@ if len(sys.argv) > 1:
 
 if seed_given:	
 	random.seed(seed)
-	datapack_name = 'rand_loot_adv_tree_{}'.format(seed)
-	datapack_desc = 'Loot Table Randomizer Advancement Tree, Seed: {}'.format(seed)
+	datapack_name = 'rlat_{}'.format(seed)
+	datapack_desc = 'Loot Table Randomizer With Advancement Tree Visual Aid, Seed: {}'.format(seed)
 else:
 	if not seed_given:
 		seed = random.randint(-sys.maxsize, sys.maxsize)
@@ -71,11 +71,11 @@ else:
 			print('If you want to use a specific randomizer seed integer, use: "python randomize.py <seed>".')
 
 	if (seed_given and not flags['hide-seed']) or (flags['save-seed'] and not seed_given):
-		datapack_name = 'rand_loot_adv_tree_{}'.format(seed)
-		datapack_desc = 'Loot Table Randomizer Advancement Tree, Seed: {}'.format(seed)
+		datapack_name = 'rlat_{}'.format(seed)
+		datapack_desc = 'Loot Table Randomizer With Advancement Tree Visual Aid, Seed: {}'.format(seed)
 	else:
-		datapack_name = 'rand_loot_adv_tree'
-		datapack_desc = 'Loot Table Randomizer Advancement Tree'
+		datapack_name = 'rlat'
+		datapack_desc = 'Loot Table Randomizer With Advancement Tree Visual Aid'
 
 if all(not flags[key] for key in flags):
 	print('Customization is available through flags. If you would like to see a list of flags use: "python rlat_help.py')
