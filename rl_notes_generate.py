@@ -289,7 +289,7 @@ def generate_recipe(pathed_selector: str, parent_item_selector: str, parent_item
 	recipe.typ = eRecipe.crafting_shaped
 	recipe.group = 'rl_notes_{}'.format(group_selector)
 	recipe.pattern = [
-		'{}{}'.format(' ' if parent_item_is_correct else 'B', ' ' if child_item_is_correct else 'B'),
+		'{}I'.format(' ' if parent_item_is_correct and child_item_is_correct else 'B'),
 		'PK'
 	]
 
@@ -299,8 +299,9 @@ def generate_recipe(pathed_selector: str, parent_item_selector: str, parent_item
 	parent.item = parent_item_selector
 
 	recipe.key = {
-		'K': knowledge_book,
+		'I': child_item_selector,
 		'P': parent,
+		'K': knowledge_book
 	}
 	if not parent_item_is_correct or not child_item_is_correct:
 		barrier = Ingredient()
@@ -659,7 +660,6 @@ def set_child_description(adv_link: AdvItem, adv_child: AdvItem):
 	adv_child.description = '{} {} {}'.format(action, item, origin)
 
 def generate_advancements(loot_table_map: LootTableMap):
-	current_advs_and_recipes = []
 	parent = get_parent_tab(loot_table_map)
 	pathed_parent = get_namespaced_selector(parent)
 	parent_selector = parent
@@ -743,6 +743,7 @@ count = 0
 for loot_table_map in loot_table_maps.values():
 	# print('Generating Advancements for: {}'.format(loot_table_map.selector))
 	if not loot_table_map.is_sub:
+		current_advs_and_recipes = []
 		generate_advancements(loot_table_map)
 		count += 1
 # print('{} trees'.format(count))
@@ -765,6 +766,7 @@ for tab in tabs:
 	generate_single_advancement(adv_tab, tab_selector, None, hidden = False, gen_base_criteria = False)
 	advancements[tab_selector].criteria = {'randomize_your_world': Criteria.populate(eTrigger.impossible)}
 	debug_function_list.append('advancement grant @a from {}:{}'.format(datapack_name, tab_selector))
+	remove_function_list.append('advancement revoke @a from {}:{}'.format(datapack_name, tab_selector))
 	reset_function_list.append('advancement grant @a only {}:{}'.format(datapack_name, tab_selector))
 
 print('Writing Files...')
