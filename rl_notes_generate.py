@@ -233,10 +233,25 @@ reset_function_list = [
 	'tellraw @a ["",{"text":"Loot table randomizer with notes, by Cethyrion, adapted from SethBling\'s Loot table randomizer","color":"green"}]',
 	'scoreboard objectives add incomplete dummy',
 	'scoreboard objectives add complete dummy',
-	'scoreboard objectives add ref_complete dummy'
+	'scoreboard objectives add ref_complete dummy',
+	'scoreboard objectives add setup dummy',
 ]
-remove_function_list = []
-tick_function_list = []
+setup_function_list = [
+	'scoreboard players set @a setup 1',
+	'say setup @s\'s RLNotes'
+]
+debug_function_list = [
+	'advancement revoke @a everything',
+	'recipe take @a *'
+]
+remove_function_list = [
+	'advancement revoke @a everything',
+	'recipe take @a *',
+]
+tick_function_list = [
+	'execute as @a unless entity @s[scores = {{ setup = 1 }}] run function {}:setup'.format(datapack_name),
+	'execute as @a[scores = {{ tab_setup = 0.. }}] run function {}:tabs'.format(datapack_name)
+]
 
 def get_minecraft_selector(selector: str):
 	return 'minecraft:{}'.format(selector)
@@ -297,9 +312,11 @@ def generate_recipe(pathed_selector: str, parent_item_selector: str, parent_item
 	knowledge_book.item = 'minecraft:knowledge_book'
 	parent = Ingredient()
 	parent.item = parent_item_selector
+	child = Ingredient()
+	child.item = child_item_selector
 
 	recipe.key = {
-		'I': child_item_selector,
+		'I': child,
 		'P': parent,
 		'K': knowledge_book
 	}
@@ -351,6 +368,7 @@ def generate_children_functions(pathed_selector: str, start_link: AdvItem, path:
 			if adv_child.adv_item_type is not eAdvItemType.reference and adv_child.selector == adv_child.item_selector:
 				for execute_conditions in execute_conditions_list:
 					functions[pathed_selector].append('execute {} run advancement grant @s only {}'.format(execute_conditions(adv_child), namespaced_selector))
+				functions[pathed_selector].append('recipe give @s[advancements = {{ {0} = true }}] {0}'.format(namespaced_selector))
 				functions[pathed_selector].append('scoreboard players add @s[advancements = {{ {} = true }}] complete 1'.format(namespaced_selector))
 				functions[pathed_selector].append('scoreboard players add @s[advancements = {{ {} = false }}] incomplete 1'.format(namespaced_selector))
 				
@@ -535,7 +553,7 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	generate_children_functions(pathed_selector, adv_link, path, base, child_index, execute_conditions_list)
 
 	reset_function_list.append('scoreboard objectives add {} {}'.format(objective_name, objective_criteria))
-	reset_function_list.append('scoreboard players set @a {} 0'.format(objective_name))
+	setup_function_list.append('scoreboard players set @a {} 0'.format(objective_name))
 	if reset_objective:
 		functions[pathed_selector].append('scoreboard players set @s {} 0'.format(objective_name))
 	if use_helper:
@@ -546,7 +564,7 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	# functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
 	# functions[pathed_selector].append('execute as @s[scores = {{ complete = 1.. }}] run say @s got {}'.format(namespaced_selector))
 
-def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: str, parent_item_selector: str = None, parent_item_is_correct: bool = False, hidden: bool = True, gen_base_criteria: bool = True):
+def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: str, parent_item_selector: str = None, parent_item_is_correct: bool = False, hidden: bool = True, gen_base_criteria: bool = True, show: bool = True, announce: bool = True):
 	selector = adv_link.selector
 	cap_name = get_upper_selector(selector)
 	item_selector = get_minecraft_selector(adv_link.item_selector)
@@ -555,8 +573,9 @@ def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespa
 		generate_recipe(pathed_selector, parent_item_selector, parent_item_is_correct, item_selector, adv_link.selector == adv_link.item_selector, adv_link.selector)
 
 	advancement = Advancement()
-	advancement.rewards = Rewards()
-	advancement.rewards.recipes = [get_namespaced_selector(pathed_selector)]
+	if adv_link.adv_item_type is eAdvItemType.root or adv_link.adv_item_type is eAdvItemType.root_table:
+		advancement.rewards = Rewards()
+		advancement.rewards.recipes = [get_namespaced_selector(pathed_selector)]
 
 	advancement.display = Display.populate(
 		icon		= item_selector,
@@ -748,7 +767,6 @@ for loot_table_map in loot_table_maps.values():
 		count += 1
 # print('{} trees'.format(count))
 
-debug_function_list = ['advancement revoke @a everything']
 page = 0
 for tab in tabs:
 	page += 1
@@ -763,11 +781,10 @@ for tab in tabs:
 
 	title = 'RLNotes Tab {}'.format(page)
 	adv_tab = AdvItem.populate(tab, eAdvItemType.tab, rl_notes_item, title, 'An RLNotes Tab')
-	generate_single_advancement(adv_tab, tab_selector, None, hidden = False, gen_base_criteria = False)
+	generate_single_advancement(adv_tab, tab_selector, None, hidden = False, gen_base_criteria = False, show = False, announce = False)
 	advancements[tab_selector].criteria = {'randomize_your_world': Criteria.populate(eTrigger.impossible)}
 	debug_function_list.append('advancement grant @a from {}:{}'.format(datapack_name, tab_selector))
-	remove_function_list.append('advancement revoke @a from {}:{}'.format(datapack_name, tab_selector))
-	reset_function_list.append('advancement grant @a only {}:{}'.format(datapack_name, tab_selector))
+	setup_function_list.append('advancement grant @s only {}:{}'.format(datapack_name, tab_selector))
 
 print('Writing Files...')
 # Create Files
@@ -797,9 +814,10 @@ zip.writestr('data/minecraft/tags/functions/load.json', json.dumps({'values':['{
 zip.writestr('data/minecraft/tags/functions/tick.json', json.dumps({'values':['{}:tick'.format(datapack_name)]}))
 
 zip.writestr('data/{}/functions/reset.mcfunction'.format(datapack_name), "\n".join(reset_function_list))
-zip.writestr('data/{}/functions/remove.mcfunction'.format(datapack_name), "\n".join(remove_function_list))
 zip.writestr('data/{}/functions/tick.mcfunction'.format(datapack_name), "\n".join(tick_function_list))
+zip.writestr('data/{}/functions/setup.mcfunction'.format(datapack_name), "\n".join(setup_function_list))
 zip.writestr('data/{}/functions/debug.mcfunction'.format(datapack_name), "\n".join(debug_function_list))
+zip.writestr('data/{}/functions/remove.mcfunction'.format(datapack_name), "\n".join(remove_function_list))
 	
 zip.close()
 with open(datapack_filename, 'wb') as file:
