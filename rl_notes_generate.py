@@ -221,7 +221,7 @@ advancements: Dict[str, Advancement] = {}
 
 
 
-rl_notes_item = 'minecraft:book_and_quill'
+rl_notes_item = 'writable_book'
 current_advs_and_recipes = []
 tabbed_advs_and_recipes = {}
 recipes: Dict[str, CraftingShaped] = {}
@@ -237,6 +237,9 @@ reset_function_list = [
 ]
 remove_function_list = []
 tick_function_list = []
+
+def get_minecraft_selector(selector: str):
+	return 'minecraft:{}'.format(selector)
 
 def get_namespaced_selector(pathed_selector: str, additional: str = None):
 	return '{}:{}{}'.format(datapack_name, pathed_selector, additional if additional is not None else '')
@@ -472,7 +475,7 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 				conditions.entity.typ = 'minecraft:sheep'
 				conditions.entity['Color'] = sheep_color_to_number(adv_link.selector)
 			else:
-				conditions.entity.typ = 'minecraft:{}'.format(adv_link.selector)
+				conditions.entity.typ = get_minecraft_selector(adv_link.selector)
 			killed_trigger_type = eTrigger.player_killed_entity
 
 		advancements[helper_selector] = Advancement()
@@ -538,10 +541,10 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	# functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
 	# functions[pathed_selector].append('execute as @s[scores = {{ complete = 1.. }}] run say @s got {}'.format(namespaced_selector))
 
-def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: str, hidden: bool = True, gen_base_criteria: bool = True, parent_item_selector: str = None, parent_item_is_correct: bool = False):
+def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: str, parent_item_selector: str = None, parent_item_is_correct: bool = False, hidden: bool = True, gen_base_criteria: bool = True):
 	selector = adv_link.selector
 	cap_name = get_upper_selector(selector)
-	item_selector = 'minecraft:{}'.format(adv_link.item_selector)
+	item_selector = get_minecraft_selector(adv_link.item_selector)
 
 	if parent_item_selector is not None:
 		generate_recipe(pathed_selector, parent_item_selector, parent_item_is_correct, item_selector, adv_link.selector == adv_link.item_selector, adv_link.selector)
@@ -656,7 +659,7 @@ def generate_advancements(loot_table_map: LootTableMap):
 	parent = get_parent_tab(loot_table_map)
 	pathed_parent = get_namespaced_selector(parent)
 	parent_selector = parent
-	parent_item_selector = rl_notes_item
+	parent_item_selector = get_minecraft_selector(rl_notes_item)
 	parent_item_is_correct = False
 
 	base = loot_table_map.selector
@@ -755,7 +758,7 @@ for tab in tabs:
 
 	title = 'RLNotes Tab {}'.format(page)
 	adv_tab = AdvItem.populate(tab, eAdvItemType.tab, rl_notes_item, title, 'An RLNotes Tab')
-	generate_single_advancement(adv_tab, tab_selector, None, False, False)
+	generate_single_advancement(adv_tab, tab_selector, None, hidden = False, gen_base_criteria = False)
 	advancements[tab_selector].criteria = {'randomize_your_world': Criteria.populate(eTrigger.impossible)}
 	debug_function_list.append('advancement grant @a from {}:{}'.format(datapack_name, tab_selector))
 	reset_function_list.append('advancement grant @a only {}:{}'.format(datapack_name, tab_selector))
@@ -780,7 +783,7 @@ for full_path, function_list in functions.items():
 
 for full_path, recipe in recipes.items():
 	# print('Writing Recipe for: {}'.format(full_path))
-	zip.writestr(os.path.join('data/{}/recipes'.format(datapack_name), '{}.mcfunction'.format(full_path)), json.dumps(recipe))
+	zip.writestr(os.path.join('data/{}/recipes'.format(datapack_name), '{}.json'.format(full_path)), json.dumps(recipe))
 	
 zip.writestr('pack.mcmeta', json.dumps({'pack':{'pack_format':1, 'description':datapack_desc}}, indent=4))
 
