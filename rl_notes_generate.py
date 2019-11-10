@@ -780,7 +780,7 @@ for full_path, function_list in functions.items():
 
 for full_path, recipe in recipes.items():
 	# print('Writing Recipe for: {}'.format(full_path))
-	zip.writestr(os.path.join('data/{}/functions'.format(datapack_name), '{}.mcfunction'.format(full_path)), json.dumps(recipe))
+	zip.writestr(os.path.join('data/{}/recipes'.format(datapack_name), '{}.mcfunction'.format(full_path)), json.dumps(recipe))
 	
 zip.writestr('pack.mcmeta', json.dumps({'pack':{'pack_format':1, 'description':datapack_desc}}, indent=4))
 
