@@ -28,11 +28,11 @@ class eAdvItemType(str, Enum):
 
 	def get_frame(self):
 		if self is eAdvItemType.root or self is eAdvItemType.block:
-			return eFrame.challenge
+			return eFrame.task
 		if self is eAdvItemType.root_table or self is eAdvItemType.reference or self is eAdvItemType.loop or self is eAdvItemType.from_items:
 			return eFrame.goal
 		if self is eAdvItemType.item or self is eAdvItemType.tab:
-			return eFrame.task
+			return eFrame.challenge
 
 
 

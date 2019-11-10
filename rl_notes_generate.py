@@ -582,8 +582,8 @@ def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespa
 		title		= adv_link.title if adv_link.title is not None else cap_name,
 		description = 'No Description',
 		frame		= adv_link.adv_item_type.get_frame(),
-		show		= True,
-		announce	= True,
+		show		= show,
+		announce	= announce,
 		hidden		= hidden
 	)
 
