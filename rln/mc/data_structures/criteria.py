@@ -1,13 +1,13 @@
 from typing import Union, List
 from enum import Enum
 
-from rl_notes.mc.base import MCDict
-from rl_notes.mc.properties import mc_basic, mc_list
-from rl_notes.mc.data_structures.range import IntRange, init_int_or_range
+from rln.mc.base import MCDict
+from rln.mc.properties import mc_basic, mc_list
+from rln.mc.data_structures.range import IntRange, init_int_or_range
 
-from rl_notes.mc.data_structures.location import eDimension, Location
-from rl_notes.mc.data_structures.entity import Entity
-from rl_notes.mc.data_structures.item import Item
+from rln.mc.data_structures.location import eDimension, Location
+from rln.mc.data_structures.entity import Entity
+from rln.mc.data_structures.item import Item
 
 class eTrigger(str, Enum):
 	bred_animals			= 'minecraft:bred_animals'

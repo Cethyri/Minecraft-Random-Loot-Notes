@@ -1,8 +1,8 @@
-from rl_notes.mc.base import MCDict
-from rl_notes.mc.properties import mc_basic
+from rln.mc.base import MCDict
+from rln.mc.properties import mc_basic
 
-from rl_notes.mc.data_structures.position import Distance
-from rl_notes.mc.data_structures.location import Location
+from rln.mc.data_structures.position import Distance
+from rln.mc.data_structures.location import Location
 
 class Entity(MCDict):
 	distance:	Distance	= mc_basic('distance', Distance)

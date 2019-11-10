@@ -4,17 +4,17 @@ import random
 from typing import List, Dict, Union, Iterable
 from enum import Enum
 
-from rl_notes.mc.base import MCDict
-from rl_notes.mc.properties import mc_basic
-from rl_notes.mc.interactable import MCActionInfo, eItemType, eActionType
+from rln.mc.base import MCDict
+from rln.mc.properties import mc_basic
+from rln.mc.interactable import MCActionInfo, eItemType, eActionType
 
-from rl_notes.mc.data_structures.loot_table import LootTable, eLootTable
-from rl_notes.mc.data_structures.entry import Entry, ItemEntry, LootTableEntry, eEntry
-from rl_notes.mc.data_structures.display import eFrame
-from rl_notes.mc.data_structures.condition import Condition, eCondition, eRestriction, get_restriction_level
-from rl_notes.mc.data_structures.display import eFrame
+from rln.mc.data_structures.loot_table import LootTable, eLootTable
+from rln.mc.data_structures.entry import Entry, ItemEntry, LootTableEntry, eEntry
+from rln.mc.data_structures.display import eFrame
+from rln.mc.data_structures.condition import Condition, eCondition, eRestriction, get_restriction_level
+from rln.mc.data_structures.display import eFrame
 
-from rl_notes.helpers.regex import get_upper_selector
+from rln.helpers.regex import get_upper_selector
 
 class eAdvItemType(str, Enum):
 	root		= 'root'

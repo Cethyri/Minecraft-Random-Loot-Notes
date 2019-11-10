@@ -1,8 +1,8 @@
 from typing import Union
 
-from rl_notes.mc.base import MCDict
-from rl_notes.mc.properties import mc_basic
-from rl_notes.mc.data_structures.range import IntRange, init_int_or_range
+from rln.mc.base import MCDict
+from rln.mc.properties import mc_basic
+from rln.mc.data_structures.range import IntRange, init_int_or_range
 
 class eEnchantment(MCDict):
 	aqua_affinity			= 'minecraft:aqua_affinity'

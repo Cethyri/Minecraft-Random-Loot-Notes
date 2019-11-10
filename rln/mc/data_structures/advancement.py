@@ -1,11 +1,11 @@
 from enum import Enum
 from typing import List, Dict
 
-from rl_notes.mc.base import MCDict
-from rl_notes.mc.properties import mc_basic, mc_list, mc_dict
+from rln.mc.base import MCDict
+from rln.mc.properties import mc_basic, mc_list, mc_dict
 
-from rl_notes.mc.data_structures.display import Display
-from rl_notes.mc.data_structures.criteria import Criteria
+from rln.mc.data_structures.display import Display
+from rln.mc.data_structures.criteria import Criteria
 
 
 class Rewards(MCDict):

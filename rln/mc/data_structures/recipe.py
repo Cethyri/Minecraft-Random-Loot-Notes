@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import List, Callable, Dict, Union
 
-from rl_notes.mc.base import MCDict
-from rl_notes.mc.properties import mc_basic, mc_list, mc_dict
+from rln.mc.base import MCDict
+from rln.mc.properties import mc_basic, mc_list, mc_dict
 
 
 class eRecipe(str, Enum):

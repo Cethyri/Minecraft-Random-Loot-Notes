@@ -1,12 +1,12 @@
 from enum import Enum
 from typing import List, Callable
 
-from rl_notes.mc.base import MCDict
-from rl_notes.mc.properties import mc_basic, mc_list
-from rl_notes.mc.interactable import MCInteractable, MCActionInfo, interact_with_subitems
+from rln.mc.base import MCDict
+from rln.mc.properties import mc_basic, mc_list
+from rln.mc.interactable import MCInteractable, MCActionInfo, interact_with_subitems
 
-from rl_notes.mc.data_structures.pool import Pool
-from rl_notes.mc.data_structures.entry import Entry
+from rln.mc.data_structures.pool import Pool
+from rln.mc.data_structures.entry import Entry
 
 
 class eLootTable(str, Enum):

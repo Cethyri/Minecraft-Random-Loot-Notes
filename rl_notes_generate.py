@@ -9,20 +9,20 @@ import math
 from enum import Enum
 from typing import Dict, List, Callable
 
-from rl_notes.loot_table_map import LootTableMap, populate_advancement_chain, AdvItem, eAdvItemType, validate_conditions
+from rln.loot_table_map import LootTableMap, populate_advancement_chain, AdvItem, eAdvItemType, validate_conditions
 
-from rl_notes.helpers.regex import fix_a_an, get_upper_selector, shorten_selector
+from rln.helpers.regex import fix_a_an, get_upper_selector, shorten_selector
 
-from rl_notes.mc.interactable import MCActionInfo, eItemType, eActionType
+from rln.mc.interactable import MCActionInfo, eItemType, eActionType
 
-from rl_notes.mc.data_structures.loot_table import LootTable, eLootTable
-from rl_notes.mc.data_structures.advancement import Advancement, Rewards
-from rl_notes.mc.data_structures.condition import Condition, eCondition, eRestriction, get_restriction_level
-from rl_notes.mc.data_structures.display import Display, Icon, TextComponent
-from rl_notes.mc.data_structures.criteria import Criteria, eTrigger, InventoryChanged, Impossible, PlayerKilledEntity, EntityKilledPlayer, FishingRodHooked
-from rl_notes.mc.data_structures.item import Item
-from rl_notes.mc.data_structures.entity import Entity
-from rl_notes.mc.data_structures.recipe import CraftingShaped, eRecipe, Ingredient, Result
+from rln.mc.data_structures.loot_table import LootTable, eLootTable
+from rln.mc.data_structures.advancement import Advancement, Rewards
+from rln.mc.data_structures.condition import Condition, eCondition, eRestriction, get_restriction_level
+from rln.mc.data_structures.display import Display, Icon, TextComponent
+from rln.mc.data_structures.criteria import Criteria, eTrigger, InventoryChanged, Impossible, PlayerKilledEntity, EntityKilledPlayer, FishingRodHooked
+from rln.mc.data_structures.item import Item
+from rln.mc.data_structures.entity import Entity
+from rln.mc.data_structures.recipe import CraftingShaped, eRecipe, Ingredient, Result
 
 
 with open('rl_notes/data/flags.json') as json_file:

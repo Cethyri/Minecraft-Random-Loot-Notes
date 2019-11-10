@@ -1,9 +1,9 @@
 from enum import Enum
 
-from rl_notes.mc.base import MCDict
-from rl_notes.mc.properties import mc_basic
+from rln.mc.base import MCDict
+from rln.mc.properties import mc_basic
 
-from rl_notes.mc.data_structures.position import Position
+from rln.mc.data_structures.position import Position
 
 class eBiome(str, Enum):
 	ocean								= 'minecraft:ocean'

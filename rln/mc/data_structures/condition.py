@@ -1,11 +1,11 @@
 from typing import List, Callable
 from enum import Enum
 
-from rl_notes.mc.base import MCDict
-from rl_notes.mc.properties import mc_basic, mc_list
-from rl_notes.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items, interact_with_item
+from rln.mc.base import MCDict
+from rln.mc.properties import mc_basic, mc_list
+from rln.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items, interact_with_item
 
-from rl_notes.mc.data_structures.location import Location
+from rln.mc.data_structures.location import Location
 
 class eCondition(str, Enum):
 	alternative					= 'minecraft:alternative'

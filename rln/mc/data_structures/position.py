@@ -1,9 +1,9 @@
 from typing import Union
 
-from rl_notes.mc.base import MCDict
-from rl_notes.mc.properties import mc_basic
+from rln.mc.base import MCDict
+from rln.mc.properties import mc_basic
 
-from rl_notes.mc.data_structures.range import FloatRange, init_float_or_range
+from rln.mc.data_structures.range import FloatRange, init_float_or_range
 
 class Position(MCDict):
 	x: Union[FloatRange, float] = mc_basic('x', init_float_or_range)

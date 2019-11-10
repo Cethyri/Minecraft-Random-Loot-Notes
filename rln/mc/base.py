@@ -1,4 +1,4 @@
-from rl_notes.mc.properties import _MCProperty
+from rln.mc.properties import _MCProperty
 
 
 class MCDict(dict):
