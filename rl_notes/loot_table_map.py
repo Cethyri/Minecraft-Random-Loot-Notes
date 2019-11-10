@@ -4,15 +4,17 @@ import random
 from typing import List, Dict, Union, Iterable
 from enum import Enum
 
-from mc_helper import MCDict, mc_property, MCActionInfo, eItemType, eActionType
+from rl_notes.mc.base import MCDict
+from rl_notes.mc.properties import mc_basic
+from rl_notes.mc.interactable import MCActionInfo, eItemType, eActionType
 
-from loot_table import LootTable, eLootTable
-from entry import Entry, ItemEntry, LootTableEntry, eEntry
-from display import eFrame
-from condition import Condition, eCondition, eRestriction, get_restriction_level
-from display import eFrame
+from rl_notes.mc.data_structures.loot_table import LootTable, eLootTable
+from rl_notes.mc.data_structures.entry import Entry, ItemEntry, LootTableEntry, eEntry
+from rl_notes.mc.data_structures.display import eFrame
+from rl_notes.mc.data_structures.condition import Condition, eCondition, eRestriction, get_restriction_level
+from rl_notes.mc.data_structures.display import eFrame
 
-from re_helper import get_upper_selector
+from rl_notes.helpers.regex import get_upper_selector
 
 class eAdvItemType(str, Enum):
 	root		= 'root'
@@ -26,20 +28,20 @@ class eAdvItemType(str, Enum):
 
 	def get_frame(self):
 		if self is eAdvItemType.root or self is eAdvItemType.block:
-			return eFrame.task
+			return eFrame.challenge
 		if self is eAdvItemType.root_table or self is eAdvItemType.reference or self is eAdvItemType.loop or self is eAdvItemType.from_items:
 			return eFrame.goal
 		if self is eAdvItemType.item or self is eAdvItemType.tab:
-			return eFrame.challenge
+			return eFrame.task
 
 
 
 class AdvItem(dict):
-	selector:		str				= mc_property('selector', str)
-	item_selector:	str				= mc_property('item_selector', str)
-	adv_item_type:	eAdvItemType	= mc_property('adv_item_type', eAdvItemType)
-	title:			str				= mc_property('title', str)
-	description:	str				= mc_property('description', str)
+	selector:		str				= mc_basic('selector', str)
+	item_selector:	str				= mc_basic('item_selector', str)
+	adv_item_type:	eAdvItemType	= mc_basic('adv_item_type', eAdvItemType)
+	title:			str				= mc_basic('title', str)
+	description:	str				= mc_basic('description', str)
 
 	@staticmethod
 	def populate(selector: str, adv_item_type: eAdvItemType, item_selector: str = None, title: str = None, description: str = None):
@@ -132,7 +134,7 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
 			adv_link.item_selector = 'seagrass'
 
 		elif adv_link.selector == 'tall_grass':
-			pass #assure tall grass registers as obtainable
+			pass #assure tall grass registers as obtainable from items it drops
 
 		else:
 			adv_link.adv_item_type = prev_type
@@ -365,7 +367,7 @@ class Ref():
 	original_condition_count = 0
 	validate_conditions: {}
 
-def validate_conditions(loot_table_map: LootTableMap, conditions: Dict[str, Condition]):
+def validate_conditions(loot_table_map: LootTableMap):
 	Ref.original_conditions = {}
 	Ref.original_condition_count = 0
 

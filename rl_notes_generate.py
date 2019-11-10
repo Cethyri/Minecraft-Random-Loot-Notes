@@ -9,39 +9,30 @@ import math
 from enum import Enum
 from typing import Dict, List, Callable
 
-from loot_table_map import LootTableMap, populate_advancement_chain, AdvItem, eAdvItemType, validate_conditions
-from loot_table import LootTable, eLootTable
-from advancement import Advancement, Rewards
-from condition import Condition, eCondition, eRestriction, get_restriction_level
-from display import Display, Icon, TextComponent
-from criteria import Criteria, eTrigger, InventoryChanged, Impossible, PlayerKilledEntity, EntityKilledPlayer, FishingRodHooked
-from item import Item
-from entity import Entity
+from rl_notes.loot_table_map import LootTableMap, populate_advancement_chain, AdvItem, eAdvItemType, validate_conditions
 
-from re_helper import fix_a_an, get_upper_selector, shorten_selector
-from mc_helper import MCActionInfo, eItemType, eActionType
+from rl_notes.helpers.regex import fix_a_an, get_upper_selector, shorten_selector
 
-requires_cheats = [
-	'giant',
-	'illusioner'
-]
+from rl_notes.mc.interactable import MCActionInfo, eItemType, eActionType
 
-flags = {
-	'hardcore': False,
-	'update': False,
-	'no-cheats': False,
-	'no-dead-ends': False,
-	#'fill-dead-ends': False,
-	#'hints': False,
-	#'loot-hints': False,
-	#'empty-loot-hints': False,
-	#'show-next': False,
-	#'show-no-drops': False,
-	'save-seed': False,
-	'hide-seed': False
-}
+from rl_notes.mc.data_structures.loot_table import LootTable, eLootTable
+from rl_notes.mc.data_structures.advancement import Advancement, Rewards
+from rl_notes.mc.data_structures.condition import Condition, eCondition, eRestriction, get_restriction_level
+from rl_notes.mc.data_structures.display import Display, Icon, TextComponent
+from rl_notes.mc.data_structures.criteria import Criteria, eTrigger, InventoryChanged, Impossible, PlayerKilledEntity, EntityKilledPlayer, FishingRodHooked
+from rl_notes.mc.data_structures.item import Item
+from rl_notes.mc.data_structures.entity import Entity
+from rl_notes.mc.data_structures.recipe import CraftingShaped, eRecipe, Ingredient, Result
+
+
+with open('rl_notes/data/flags.json') as json_file:
+	flags_from_json = json.load(json_file)
+	flags = {}
+	for flag in flags_from_json:
+		flags[flag] = False
 
 seed_given = False
+flags_used = 0
 if len(sys.argv) > 1:
 	argstart = 1
 	if not sys.argv[1].startswith('--'):
@@ -57,13 +48,14 @@ if len(sys.argv) > 1:
 		arg = sys.argv[i].replace('--', '', 1)
 		if arg in flags:
 			flags[arg] = True
+			flags_used += 1
 		else:
 			print('{} is not a recognized flag, ignoring...'.format(arg))
 
 if seed_given:	
 	random.seed(seed)
-	datapack_name = 'rlat_{}'.format(seed)
-	datapack_desc = 'Loot Table Randomizer With Advancement Tree Visual Aid, Seed: {}'.format(seed)
+	datapack_name = 'rl_notes_{}'.format(seed)
+	datapack_desc = 'Loot Table Randomizer With Notes, Seed: {}'.format(seed)
 else:
 	if not seed_given:
 		seed = random.randint(-sys.maxsize, sys.maxsize)
@@ -71,19 +63,19 @@ else:
 			print('If you want to use a specific randomizer seed integer, use: "python randomize.py <seed>".')
 
 	if (seed_given and not flags['hide-seed']) or (flags['save-seed'] and not seed_given):
-		datapack_name = 'rlat_{}'.format(seed)
-		datapack_desc = 'Loot Table Randomizer With Advancement Tree Visual Aid, Seed: {}'.format(seed)
+		datapack_name = 'rl_notes_{}'.format(seed)
+		datapack_desc = 'Loot Table Randomizer With Notes, Seed: {}'.format(seed)
 	else:
-		datapack_name = 'rlat'
-		datapack_desc = 'Loot Table Randomizer With Advancement Tree Visual Aid'
+		datapack_name = 'rl_notes'
+		datapack_desc = 'Loot Table Randomizer With Notes'
 
-if all(not flags[key] for key in flags):
-	print('Customization is available through flags. If you would like to see a list of flags use: "python rlat_help.py')
+if not flags_used == 0:
+	print('Customization is available through flags. If you would like to see a list of flags use: "python rl_notes_help.py')
 	
 datapack_filename = datapack_name + '.zip'
 
 
-print(flags)
+# print(flags)
 
 
 print('Generating datapack...')
@@ -103,6 +95,9 @@ original_to_selector = {}
 
 
 print('Loading Tables...')
+
+with open('rl_notes/mc/data/requires_cheats.json') as json_file:
+	requires_cheats = json.load(json_file)
 
 def load_table_info():
 	if update_pre_randomized:
@@ -196,25 +191,10 @@ randomize()
 
 print('Validating loot tables...')
 
-conditions = {
-	eRestriction.none: [],
-	eRestriction.type_specific: [],
-	eRestriction.table_specific: [],
-	eRestriction.dont_validate: [],
-	eRestriction.other: []
-}
-
-def collect_conditions(condition: Condition, info: MCActionInfo):
-	restriction = get_restriction_level(condition)
-
-	if condition not in conditions[restriction]:
-		conditions[restriction].append(condition)
-
 def validate():
 	for selector in loot_table_maps:
 		# print('Validating: {}'.format(selector))
-		loot_table_maps[selector].remapped.interact(MCActionInfo(eItemType.Condition, collect_conditions, eActionType.Interact))
-		validate_conditions(loot_table_maps[selector], conditions)
+		validate_conditions(loot_table_maps[selector])
 validate()
 		
 
@@ -232,18 +212,25 @@ populate()
 
 print('Generating Advancements...')
 
-with open('double_tall_blocks.json') as json_file:
+with open('rl_notes/mc/data/double_tall_blocks.json') as json_file:
 	double_tall_blocks = json.load(json_file)
 		
 tabs_possible_images: Dict[str, List[str]] = {}
 tabs: List[str] = []
 advancements: Dict[str, Advancement] = {}
 
+
+
+rl_notes_item = 'minecraft:book_and_quill'
+current_advs_and_recipes = []
+tabbed_advs_and_recipes = {}
+recipes: Dict[str, CraftingShaped] = {}
+
 objective_num = 0
 functions: Dict[str, List[str]] = {}
 
 reset_function_list = [
-	'tellraw @a ["",{"text":"Loot table randomizer with advancement tree by Cethyrion, adapted from SethBling\'s Loot table randomizer","color":"green"}]',
+	'tellraw @a ["",{"text":"Loot table randomizer with notes, by Cethyrion, adapted from SethBling\'s Loot table randomizer","color":"green"}]',
 	'scoreboard objectives add incomplete dummy',
 	'scoreboard objectives add complete dummy',
 	'scoreboard objectives add ref_complete dummy'
@@ -294,6 +281,32 @@ def get_pathed_selector(selector: str, path: str, base: str, link_index: int):
 	name = '{}-{}'.format(link_index, selector) if link_index >= 0 else selector
 	return os.path.join(path, base, name).replace('\\', '/')
 
+def generate_recipe(pathed_selector: str, parent_item_selector: str, parent_item_is_correct: bool, child_item_selector: str, child_item_is_correct: bool, group_selector: str):
+	recipe = CraftingShaped()
+	recipe.typ = eRecipe.crafting_shaped
+	recipe.group = 'rl_notes_{}'.format(group_selector)
+	recipe.pattern = [
+		'{}{}'.format(' ' if parent_item_is_correct else 'B', ' ' if child_item_is_correct else 'B'),
+		'PK'
+	]
+	barrier = Ingredient()
+	barrier.item = 'minecraft:barrier'
+	knowledge_book = Ingredient()
+	knowledge_book.item = 'minecraft:knowledge_book'
+	parent = Ingredient()
+	parent.item = parent_item_selector
+	recipe.key = {
+		'B': barrier,
+		'K': knowledge_book,
+		'P': parent,
+	}
+	recipe.result = Result()
+	recipe.result.count = 1
+	recipe.result.item = child_item_selector
+
+	recipes[pathed_selector] = recipe
+	current_advs_and_recipes.append(recipe)
+
 def generate_children_functions(pathed_selector: str, start_link: AdvItem, path: str, base: str, child_index: int, execute_conditions_list: List[Callable]):
 	
 	functions[pathed_selector].append('scoreboard players set @s incomplete 0')
@@ -316,8 +329,6 @@ def generate_children_functions(pathed_selector: str, start_link: AdvItem, path:
 			functions[pathed_selector].append('scoreboard players set @s ref_complete 0')
 
 		references.append(current_map.selector)
-		if start_link.selector == 'buried_treasure':
-			pass
 
 		branches = []
 		if cur_link.selector in current_map.adv_branches:
@@ -327,10 +338,6 @@ def generate_children_functions(pathed_selector: str, start_link: AdvItem, path:
 
 		for adv_child in branches:
 			child_pathed_selector = get_pathed_selector(adv_child.selector, path, base, 1 if is_reference else child_index)
-
-			if adv_child.adv_item_type is not eAdvItemType.item and adv_child.adv_item_type is not eAdvItemType.reference and adv_child.adv_item_type is not eAdvItemType.block and adv_child.adv_item_type is not eAdvItemType.loop:
-				print('Warning: unknown child advancement type... {}'.format(adv_child.selector))
-				print('Parent Selector: {}'.format(current_map.selector))
 
 			namespaced_selector = get_namespaced_selector(child_pathed_selector)
 			if adv_child.adv_item_type is not eAdvItemType.reference and adv_child.selector == adv_child.item_selector:
@@ -531,17 +538,22 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	# functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
 	# functions[pathed_selector].append('execute as @s[scores = {{ complete = 1.. }}] run say @s got {}'.format(namespaced_selector))
 
-def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: str, hidden: bool = True, gen_base_criteria: bool = True):
+def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: str, hidden: bool = True, gen_base_criteria: bool = True, parent_item_selector: str = None, parent_item_is_correct: bool = False):
 	selector = adv_link.selector
 	cap_name = get_upper_selector(selector)
 	item_selector = 'minecraft:{}'.format(adv_link.item_selector)
 
+	if parent_item_selector is not None:
+		generate_recipe(pathed_selector, parent_item_selector, parent_item_is_correct, item_selector, adv_link.selector == adv_link.item_selector, adv_link.selector)
+
 	advancement = Advancement()
+	advancement.rewards = Rewards()
+	advancement.rewards.recipes = [get_namespaced_selector(pathed_selector)]
 
 	advancement.display = Display.populate(
 		icon		= item_selector,
 		title		= adv_link.title if adv_link.title is not None else cap_name,
-		description = adv_link.description if (adv_link.description is not None) else 'No Description',
+		description = 'No Description',
 		frame		= adv_link.adv_item_type.get_frame(),
 		show		= True,
 		announce	= True,
@@ -552,16 +564,12 @@ def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespa
 		advancement.parent = namespaced_parent_selector
 	else:
 		advancement.display.background = 'minecraft:textures/block/dirt.png'
-	advancements[pathed_selector] = advancement
 
 	if gen_base_criteria:
-		# if (adv_link.adv_item_type is eAdvItemType.block or adv_link.adv_item_type is eAdvItemType.from_items or adv_link.selector == 'armor_stand') and adv_link.selector == adv_link.item_selector:
-		# 	conditions = InventoryChanged()
-		# 	conditions.req_items = [ Item.populate(item_id = item_selector) ]
-		# 	advancement.criteria = { 'collect': Criteria.populate(eTrigger.inventory_changed, conditions) }
-		# else:
-		# 	advancement.criteria = { 'get': Criteria.populate(eTrigger.impossible) }
 		advancement.criteria = { 'get': Criteria.populate(eTrigger.impossible) }
+	
+	advancements[pathed_selector] = advancement
+	current_advs_and_recipes.append(advancement)
 
 def get_parent_tab(loot_table_map: LootTableMap):
 	if loot_table_map.original.typ is eLootTable.advancement_reward:
@@ -644,9 +652,12 @@ def set_child_description(adv_link: AdvItem, adv_child: AdvItem):
 	adv_child.description = '{} {} {}'.format(action, item, origin)
 
 def generate_advancements(loot_table_map: LootTableMap):
+	current_advs_and_recipes = []
 	parent = get_parent_tab(loot_table_map)
 	pathed_parent = get_namespaced_selector(parent)
 	parent_selector = parent
+	parent_item_selector = rl_notes_item
+	parent_item_is_correct = False
 
 	base = loot_table_map.selector
 	path = loot_table_map.file_path
@@ -668,9 +679,11 @@ def generate_advancements(loot_table_map: LootTableMap):
 			pathed_parent = child_pathed_parent
 
 		pathed_selector = get_pathed_selector(adv_link.selector, path, base, link_index)
-		generate_single_advancement(adv_link, pathed_selector, pathed_parent)
+		generate_single_advancement(adv_link, pathed_selector, pathed_parent, parent_item_selector, parent_item_is_correct)
 		
 		parent_selector = adv_link.selector
+		parent_item_selector = "minecraft:{}".format(adv_link.item_selector)
+		parent_item_is_correct = adv_link.item_selector == adv_link.selector
 		pathed_parent = get_namespaced_selector(pathed_selector)
 
 		if parent_selector in loot_table_map.adv_branches:
@@ -685,13 +698,9 @@ def generate_advancements(loot_table_map: LootTableMap):
 					loot_table_map.adv_length += branch_length
 
 			for adv_child in branch:
-				if adv_child.selector == 'attached_pumpkin_stem':
-					print(adv_link)
-					print(adv_child)
 				set_child_description(adv_link, adv_child)
 				child_pathed_selector = get_pathed_selector(adv_child.selector, path, base, link_index + 1)
-				generate_single_advancement(adv_child, child_pathed_selector, child_pathed_parent)
-
+				generate_single_advancement(adv_child, child_pathed_selector, child_pathed_parent, parent_item_selector, parent_item_is_correct)
 				child_pathed_parent = get_namespaced_selector(child_pathed_selector)
 				from_items_length += 1
 				if split:
@@ -703,22 +712,25 @@ def generate_advancements(loot_table_map: LootTableMap):
 		
 		generate_conditions(pathed_selector, adv_link, path, base, link_index)
 
+	tab_name = parent
 	if parent != 'fishing':
 		if loot_table_map.adv_length == 1:
-			advancements[first_path].parent = get_namespaced_selector('no_drops')
+			tab_name = 'no_drops'
 		elif loot_table_map.adv_length < 8:
-			advancements[first_path].parent = get_namespaced_selector(parent, '_short')
+			tab_name = '{}_short'.format(parent)
 		elif loot_table_map.adv_length < 16 and parent == 'entities':
-			advancements[first_path].parent = get_namespaced_selector(parent, '_medium_short')
+			tab_name = '{}_medium_short'.format(parent)
 		elif loot_table_map.adv_length >= 24 and parent == 'entities':
-			advancements[first_path].parent = get_namespaced_selector(parent, '_long')
+			tab_name = '{}_long'.format(parent)
+
+		advancements[first_path].parent = get_namespaced_selector(tab_name)
 	
-	tab_name = advancements[first_path].parent.replace('{}:'.format(datapack_name), '')
 	if tab_name not in tabs:
 		tabs.append(tab_name)
-		tabs_possible_images[tab_name] = []
 
-	tabs_possible_images[tab_name].append(loot_table_map.adv_chain[0].item_selector)
+	if tab_name not in tabbed_advs_and_recipes:
+		tabbed_advs_and_recipes[tab_name] = []
+	tabbed_advs_and_recipes[tab_name].extend(current_advs_and_recipes)
 
 count = 0
 for loot_table_map in loot_table_maps.values():
@@ -729,21 +741,20 @@ for loot_table_map in loot_table_maps.values():
 # print('{} trees'.format(count))
 
 debug_function_list = ['advancement revoke @a everything']
-used_image_selectors = []
+page = 0
 for tab in tabs:
-	tab_selector = get_pathed_selector(tab, '', '', -1)
-	temp_possible_images = tabs_possible_images[tab]
-	random.shuffle(temp_possible_images)
-	while True:
-		image_selector = temp_possible_images.pop()
-		if image_selector not in used_image_selectors or len(temp_possible_images) == 0:
-			break
+	page += 1
 
-	title = 'Random Loot: {}'.format(get_upper_selector(image_selector))
-	additional = used_image_selectors.count(image_selector) - 1
-	if additional > 0:
-		title = '{} {}'.format(title, additional)
-	adv_tab = AdvItem.populate(tab, eAdvItemType.tab, image_selector, title, 'A Random Loot Tab')
+	for stuff in tabbed_advs_and_recipes[tab]:
+		if isinstance(stuff, Advancement):
+			stuff.display.description = 'On RLNotes Tab {}'.format(page)
+		elif isinstance(stuff, CraftingShaped):
+			stuff.result.count = page
+
+	tab_selector = get_pathed_selector(tab, '', '', -1)
+
+	title = 'RLNotes Tab {}'.format(page)
+	adv_tab = AdvItem.populate(tab, eAdvItemType.tab, rl_notes_item, title, 'An RLNotes Tab')
 	generate_single_advancement(adv_tab, tab_selector, None, False, False)
 	advancements[tab_selector].criteria = {'randomize_your_world': Criteria.populate(eTrigger.impossible)}
 	debug_function_list.append('advancement grant @a from {}:{}'.format(datapack_name, tab_selector))
@@ -764,8 +775,12 @@ for full_path, advancement in advancements.items():
 	zip.writestr(os.path.join('data/{}/advancements'.format(datapack_name), '{}.json'.format(full_path)), json.dumps(advancement))
 
 for full_path, function_list in functions.items():
-	# print('Writing Advancement for: {}'.format(full_path))
+	# print('Writing Functions for: {}'.format(full_path))
 	zip.writestr(os.path.join('data/{}/functions'.format(datapack_name), '{}.mcfunction'.format(full_path)), "\n".join(function_list))
+
+for full_path, recipe in recipes.items():
+	# print('Writing Recipe for: {}'.format(full_path))
+	zip.writestr(os.path.join('data/{}/functions'.format(datapack_name), '{}.mcfunction'.format(full_path)), json.dumps(recipe))
 	
 zip.writestr('pack.mcmeta', json.dumps({'pack':{'pack_format':1, 'description':datapack_desc}}, indent=4))
 
@@ -780,9 +795,5 @@ zip.writestr('data/{}/functions/debug.mcfunction'.format(datapack_name), "\n".jo
 zip.close()
 with open(datapack_filename, 'wb') as file:
 	file.write(zipbytes.getvalue())
-
-# for key in conditions:
-# 	with open(os.path.join('restrictions', '{}.json'.format(key.name)), 'wt') as file:
-# 		file.write(json.dumps(conditions[key]))
 		
 print('Created datapack "{}"'.format(datapack_filename))

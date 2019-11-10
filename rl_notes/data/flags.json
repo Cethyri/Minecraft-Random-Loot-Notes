@@ -1,0 +1,20 @@
+{
+  "hardcore": {
+    "explanation": "Excludes the player loot table from randomization."
+  },
+  "update": {
+    "explanation": "Attempts to create the datapack using pre-randomized loot-tables that you provide in the \"randomized\" folder"
+  },
+  "no-cheats": {
+    "explanation": "Excludes loot tables in \"requires_cheats.json\" from randomization"
+  },
+  "no-dead-ends": {
+    "explanation": "Excludes loot tables that drop nothing from randomization"
+  },
+  "save-seed": {
+    "explanation": "Includes the randomly generated seed in the datapack name and description"
+  },
+  "hide-seed": {
+    "explanation": "Excludes your provided seed from the datapack name and description"
+  }
+}

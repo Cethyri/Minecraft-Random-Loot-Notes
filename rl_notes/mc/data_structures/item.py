@@ -1,18 +1,19 @@
 from typing import Union, List
 
-from mc_helper import MCDict, mc_property, mc_list_property
-from mc_range import IntRange, init_int_or_range
+from rl_notes.mc.base import MCDict
+from rl_notes.mc.properties import mc_basic, mc_list
+from rl_notes.mc.data_structures.range import IntRange, init_int_or_range
 
-from enchantment import Enchantment
+from rl_notes.mc.data_structures.enchantment import Enchantment
 
 class Item(MCDict):
-	count:			Union[IntRange, int]	= mc_property('count', init_int_or_range)
-	durability:		Union[IntRange, int]	= mc_property('durability', init_int_or_range)
-	enchantments:	List[Enchantment]		= mc_list_property('enchantments', Enchantment)
-	item_id:		str						= mc_property('item', str)
-	nbt:			str						= mc_property('nbt', str)
-	potion:			str						= mc_property('potion', str)
-	tag:			str						= mc_property('tag', str)
+	count:			Union[IntRange, int]	= mc_basic('count', init_int_or_range)
+	durability:		Union[IntRange, int]	= mc_basic('durability', init_int_or_range)
+	enchantments:	List[Enchantment]		= mc_list('enchantments', Enchantment)
+	item_id:		str						= mc_basic('item', str)
+	nbt:			str						= mc_basic('nbt', str)
+	potion:			str						= mc_basic('potion', str)
+	tag:			str						= mc_basic('tag', str)
 
 	@staticmethod
 	def populate(count: Union[IntRange, int] = None, durability: Union[IntRange, int] = None, enchantments: List[Enchantment] = None, item_id: str = None, nbt: str = None, potion: str = None, tag: str = None):

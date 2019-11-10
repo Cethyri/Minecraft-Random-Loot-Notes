@@ -1,10 +1,11 @@
 from enum import Enum
 
-from mc_helper import MCDict, mc_property
+from rl_notes.mc.base import MCDict
+from rl_notes.mc.properties import mc_basic
 
 class Icon(MCDict):
-	item:	str = mc_property('item', str)
-	nbt:	str = mc_property('nbt', str)
+	item:	str = mc_basic('item', str)
+	nbt:	str = mc_basic('nbt', str)
 
 	@staticmethod
 	def populate(item: str = ''):
@@ -14,7 +15,7 @@ class Icon(MCDict):
 		return icon
 
 class TextComponent(MCDict):
-	text: str = mc_property('text', str)
+	text: str = mc_basic('text', str)
 
 	@staticmethod
 	def populate(text: str = ''):
@@ -29,14 +30,14 @@ class eFrame(str, Enum):
 	challenge	= 'challenge'
 
 class Display(MCDict):
-	icon:				Icon			= mc_property('icon', Icon)
-	title:				TextComponent	= mc_property('title', TextComponent)
-	frame:				eFrame			= mc_property('frame', eFrame)
-	background:			str				= mc_property('background', str)
-	description:		TextComponent	= mc_property('description', TextComponent)
-	show_toast:			bool			= mc_property('show_toast', bool)
-	announce_to_chat:	bool			= mc_property('announce_to_chat', bool)
-	hidden:				bool			= mc_property('hidden', bool)
+	icon:				Icon			= mc_basic('icon', Icon)
+	title:				TextComponent	= mc_basic('title', TextComponent)
+	frame:				eFrame			= mc_basic('frame', eFrame)
+	background:			str				= mc_basic('background', str)
+	description:		TextComponent	= mc_basic('description', TextComponent)
+	show_toast:			bool			= mc_basic('show_toast', bool)
+	announce_to_chat:	bool			= mc_basic('announce_to_chat', bool)
+	hidden:				bool			= mc_basic('hidden', bool)
 
 	@staticmethod
 	def populate(icon: str, title: str, description: str, frame: str = None, background: str = None, show: bool = None, announce: bool = None, hidden: bool = None):

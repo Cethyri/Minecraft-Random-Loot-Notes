@@ -1,10 +1,12 @@
 from typing import List, Union, Callable
 from enum import Enum
 
-from mc_helper import MCDict, mc_property, mc_list_property, MCInteractable, MCActionInfo, eItemType, eActionType, interact_with_items, interact_with_subitems
+from rl_notes.mc.base import MCDict
+from rl_notes.mc.properties import mc_basic, mc_list
+from rl_notes.mc.interactable import MCInteractable, MCActionInfo, eItemType, eActionType, interact_with_items, interact_with_subitems
 
-from condition import Condition
-from function import Function
+from rl_notes.mc.data_structures.condition import Condition
+from rl_notes.mc.data_structures.function import Function
 
 class eEntry(str, Enum):
 	item			= 'minecraft:item'
@@ -22,10 +24,10 @@ class eDynamic(str, Enum):
 
 
 class Entry(MCDict, MCInteractable):
-	conditions:	List[Condition]	= mc_list_property('conditions', Condition.create)
-	typ:		eEntry			= mc_property('type', eEntry)
-	weight:		int				= mc_property('weight', int)
-	quality:	int				= mc_property('quality', int)
+	conditions:	List[Condition]	= mc_list('conditions', Condition.create)
+	typ:		eEntry			= mc_basic('type', eEntry)
+	weight:		int				= mc_basic('weight', int)
+	quality:	int				= mc_basic('quality', int)
 
 	def interact(self, info: MCActionInfo):
 		if info.item_type == eItemType.Entry and 'children' in self:
@@ -71,27 +73,27 @@ class Entry(MCDict, MCInteractable):
 
 
 class ItemEntry(Entry):
-	name:		str				= mc_property('name', str)
-	functions:	List[Function]	= mc_list_property('functions', Function.create)
+	name:		str				= mc_basic('name', str)
+	functions:	List[Function]	= mc_list('functions', Function.create)
 
 class TagEntry(Entry):
-	name:	str		= mc_property('name', str)
-	expand:	bool	= mc_property('expand', bool)
+	name:	str		= mc_basic('name', str)
+	expand:	bool	= mc_basic('expand', bool)
 
 class LootTableEntry(Entry):
-	name: str = mc_property('name', str)
+	name: str = mc_basic('name', str)
 
 class GroupEntry(Entry):
-	children: List[Entry] = mc_list_property('children', Entry.create)
+	children: List[Entry] = mc_list('children', Entry.create)
 
 class AlternativesEntry(Entry):
-	children: List[Entry] = mc_list_property('children', Entry.create)
+	children: List[Entry] = mc_list('children', Entry.create)
 
 class SequenceEntry(Entry):
-	children: List[Entry] = mc_list_property('children', Entry.create)
+	children: List[Entry] = mc_list('children', Entry.create)
 
 class DynamicEntry(Entry):
-	name: eDynamic = mc_property('name', eDynamic)
+	name: eDynamic = mc_basic('name', eDynamic)
 
 
 a = property()

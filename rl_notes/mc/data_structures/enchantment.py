@@ -1,7 +1,8 @@
 from typing import Union
 
-from mc_helper import MCDict, mc_property
-from mc_range import IntRange, init_int_or_range
+from rl_notes.mc.base import MCDict
+from rl_notes.mc.properties import mc_basic
+from rl_notes.mc.data_structures.range import IntRange, init_int_or_range
 
 class eEnchantment(MCDict):
 	aqua_affinity			= 'minecraft:aqua_affinity'
@@ -43,5 +44,5 @@ class eEnchantment(MCDict):
 	vanishing_curse			= 'minecraft:vanishing_curse'
 
 class Enchantment(MCDict):
-	enchantment:	eEnchantment			= mc_property('enchantment', eEnchantment)
-	levels:			Union[IntRange, int]	= mc_property('levels', init_int_or_range)
+	enchantment:	eEnchantment			= mc_basic('enchantment', eEnchantment)
+	levels:			Union[IntRange, int]	= mc_basic('levels', init_int_or_range)

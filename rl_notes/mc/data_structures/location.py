@@ -1,8 +1,9 @@
 from enum import Enum
 
-from mc_helper import MCDict, mc_property
+from rl_notes.mc.base import MCDict
+from rl_notes.mc.properties import mc_basic
 
-from position import Position
+from rl_notes.mc.data_structures.position import Position
 
 class eBiome(str, Enum):
 	ocean								= 'minecraft:ocean'
@@ -103,7 +104,7 @@ class eFeature(str, Enum):
 	village			= 'minecraft:village'
 
 class Location(MCDict):
-	biome:		eBiome		= mc_property('biome', eBiome)
-	dimension:	eDimension	= mc_property('dimension', eDimension)
-	feature:	eFeature	= mc_property('feature', eFeature)
-	position:	Position	= mc_property('position', Position)
+	biome:		eBiome		= mc_basic('biome', eBiome)
+	dimension:	eDimension	= mc_basic('dimension', eDimension)
+	feature:	eFeature	= mc_basic('feature', eFeature)
+	position:	Position	= mc_basic('position', Position)

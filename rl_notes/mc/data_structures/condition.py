@@ -1,9 +1,11 @@
 from typing import List, Callable
 from enum import Enum
 
-from mc_helper import MCDict, mc_property, mc_list_property, MCInteractable, MCActionInfo, eItemType, interact_with_items, interact_with_item
+from rl_notes.mc.base import MCDict
+from rl_notes.mc.properties import mc_basic, mc_list
+from rl_notes.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items, interact_with_item
 
-from location import Location
+from rl_notes.mc.data_structures.location import Location
 
 class eCondition(str, Enum):
 	alternative					= 'minecraft:alternative'
@@ -30,7 +32,7 @@ class eEntity(str, Enum):
 	killer_player	= 'killer_player'
 
 class Condition(MCDict, MCInteractable):
-	condition: eCondition = mc_property('condition', eCondition)
+	condition: eCondition = mc_basic('condition', eCondition)
 
 	def interact(self, info: MCActionInfo):
 		if info.item_type == eItemType.Condition and 'terms' in self:
@@ -97,37 +99,37 @@ class Condition(MCDict, MCInteractable):
 			return Condition(json_dict)
 
 class Alternative(Condition):
-	terms: List[Condition] = mc_list_property('terms', Condition.create)
+	terms: List[Condition] = mc_list('terms', Condition.create)
 
 class BlockStateProperty(Condition):
-	block:		str		= mc_property('block', str)
-	properties:	dict	= mc_property('properties', dict)
+	block:		str		= mc_basic('block', str)
+	properties:	dict	= mc_basic('properties', dict)
 
 class DamageSourceProperties(Condition):
-	properties: dict = mc_property('properties', dict)
+	properties: dict = mc_basic('properties', dict)
 
 class EntityPresent(Condition):
 	__init__ = Condition.__init__
 
 class EntityProperties(Condition):
-	entity:		eEntity	= mc_property('entity', eEntity)
-	predicate:	dict	= mc_property('predicate', dict)
+	entity:		eEntity	= mc_basic('entity', eEntity)
+	predicate:	dict	= mc_basic('predicate', dict)
 
 class EntityScores(Condition):
-	entity: eEntity	= mc_property('entity', eEntity)
-	scores: dict	= mc_property('scores', dict)
+	entity: eEntity	= mc_basic('entity', eEntity)
+	scores: dict	= mc_basic('scores', dict)
 
 class Inverted(Condition):
-	term: Condition = mc_property('term', Condition.create)
+	term: Condition = mc_basic('term', Condition.create)
 
 class KilledByPlayer(Condition):
-	inverse: bool = mc_property('inverse', bool)
+	inverse: bool = mc_basic('inverse', bool)
 
 class LocationCheck(Condition):
-	predicate: Location = mc_property('predicate', Location)
+	predicate: Location = mc_basic('predicate', Location)
 
 class MatchTool(Condition):
-	predicate:	dict	= mc_property('predicate', dict)
+	predicate:	dict	= mc_basic('predicate', dict)
 
 class RandomChance(Condition):
 	pass

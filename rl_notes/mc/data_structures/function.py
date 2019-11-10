@@ -1,9 +1,11 @@
 from typing import List
 from enum import Enum
 
-from mc_helper import MCDict, mc_property, mc_list_property, MCInteractable, MCActionInfo, eItemType, interact_with_items
+from rl_notes.mc.base import MCDict
+from rl_notes.mc.properties import mc_basic, mc_list
+from rl_notes.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items
 
-from condition import Condition
+from rl_notes.mc.data_structures.condition import Condition
 
 class eFunction(str, Enum):
 	apply_bonus			= 'minecraft:apply_bonus'
@@ -28,8 +30,8 @@ class eFunction(str, Enum):
 
 
 class Function(MCDict, MCInteractable):
-	function:	eFunction		= mc_property('function', eFunction)
-	conditions:	List[Condition]	= mc_list_property('conditions', Condition.create)
+	function:	eFunction		= mc_basic('function', eFunction)
+	conditions:	List[Condition]	= mc_list('conditions', Condition.create)
 
 	def interact(self, info: MCActionInfo):
 		if info.item_type == eItemType.Condition and 'conditions' in self:
