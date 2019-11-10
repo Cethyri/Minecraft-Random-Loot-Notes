@@ -212,7 +212,7 @@ populate()
 
 print('Generating Advancements...')
 
-with open('rl_notes/mc/data/double_tall_blocks.json') as json_file:
+with open('rln/mc/data/double_tall_blocks.json') as json_file:
 	double_tall_blocks = json.load(json_file)
 		
 tabs_possible_images: Dict[str, List[str]] = {}
