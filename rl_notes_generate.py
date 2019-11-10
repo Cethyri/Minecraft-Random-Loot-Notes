@@ -292,17 +292,21 @@ def generate_recipe(pathed_selector: str, parent_item_selector: str, parent_item
 		'{}{}'.format(' ' if parent_item_is_correct else 'B', ' ' if child_item_is_correct else 'B'),
 		'PK'
 	]
-	barrier = Ingredient()
-	barrier.item = 'minecraft:barrier'
+
 	knowledge_book = Ingredient()
 	knowledge_book.item = 'minecraft:knowledge_book'
 	parent = Ingredient()
 	parent.item = parent_item_selector
+
 	recipe.key = {
-		'B': barrier,
 		'K': knowledge_book,
 		'P': parent,
 	}
+	if not parent_item_is_correct or not child_item_is_correct:
+		barrier = Ingredient()
+		barrier.item = 'minecraft:barrier'
+		recipe.key['B'] = barrier,
+	
 	recipe.result = Result()
 	recipe.result.count = 1
 	recipe.result.item = child_item_selector
