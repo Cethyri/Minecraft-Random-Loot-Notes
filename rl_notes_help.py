@@ -1,7 +1,7 @@
 import json
 
 
-with open('rl_notes/data/flags.json') as json_file:
+with open('rln/data/flags.json') as json_file:
 	flags = json.load(json_file)
 
 for flag in flags:

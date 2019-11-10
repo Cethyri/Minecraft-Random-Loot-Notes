@@ -25,7 +25,7 @@ from rln.mc.data_structures.entity import Entity
 from rln.mc.data_structures.recipe import CraftingShaped, eRecipe, Ingredient, Result
 
 
-with open('rl_notes/data/flags.json') as json_file:
+with open('rln/data/flags.json') as json_file:
 	flags_from_json = json.load(json_file)
 	flags = {}
 	for flag in flags_from_json:
@@ -96,7 +96,7 @@ original_to_selector = {}
 
 print('Loading Tables...')
 
-with open('rl_notes/mc/data/requires_cheats.json') as json_file:
+with open('rln/mc/data/requires_cheats.json') as json_file:
 	requires_cheats = json.load(json_file)
 
 def load_table_info():
