@@ -13,6 +13,7 @@ from rln.mc.data_structures.entry import Entry, ItemEntry, LootTableEntry, eEntr
 from rln.mc.data_structures.display import eFrame
 from rln.mc.data_structures.condition import Condition, eCondition, eRestriction, get_restriction_level
 from rln.mc.data_structures.display import eFrame
+from rln.mc.data_structures.function import eFunction
 
 from rln.helpers.regex import get_upper_selector
 
@@ -302,7 +303,7 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 	def collect(entry: Entry, info: MCActionInfo):
 		if isinstance(entry, (ItemEntry, LootTableEntry)) and not any(entry.name == e.name and entry.typ is e.typ for e in entries):
 			entries.append(entry)
-
+				
 	while build_chain:
 		entries = []
 		current_map.remapped.interact(MCActionInfo(eItemType.Entry, collect, eActionType.Interact))
@@ -317,6 +318,10 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 
 		for entry in entries:
 			adv_item = create_adv_item(entry, loot_table_maps)
+			if entry.name == 'minecraft:book' and 'functions' in entry and any(func.function is eFunction.enchant_randomly or func.function is eFunction.enchant_with_levels for func in entry.functions):
+				adv_item.selector = "enchanted_book"
+				adv_item.item_selector = "enchanted_book"
+			
 			if not found_link and adv_item.selector == current_map.remap_selector and adv_item.adv_item_type is eAdvItemType.item and loot_table_maps[adv_item.selector].original.typ is eLootTable.block:
 				last_link = adv_item
 				adv_item.adv_item_type = eAdvItemType.block

@@ -197,7 +197,7 @@ def get_restriction_level(condition: Condition):
 		restriction = eRestriction.none
 
 	elif condition.condition == eCondition.random_chance_with_looting:
-		restriction = eRestriction.none
+		restriction = eRestriction.type_specific
 
 	elif condition.condition == eCondition.reference:
 		pass

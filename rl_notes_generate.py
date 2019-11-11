@@ -69,13 +69,13 @@ else:
 		datapack_name = 'rl_notes'
 		datapack_desc = 'Loot Table Randomizer With Notes'
 
-if not flags_used == 0:
+if flags_used == 0:
 	print('Customization is available through flags. If you would like to see a list of flags use: "python rl_notes_help.py')
 	
 datapack_filename = datapack_name + '.zip'
 
 
-# print(flags)
+print(flags)
 
 
 print('Generating datapack...')
@@ -561,8 +561,8 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 
 	functions[pathed_selector].append('advancement grant @s{} only {}'.format(grant_target_selector, namespaced_selector))
 	functions[pathed_selector].append('scoreboard players reset @s[scores = {{ incomplete = 0 }}] {}'.format(objective_name))
-	# functions[pathed_selector].append('say @s triggered {} : because {}'.format(namespaced_selector, objective_name))
-	# functions[pathed_selector].append('execute as @s[scores = {{ complete = 1.. }}] run say @s got {}'.format(namespaced_selector))
+	functions[pathed_selector].append('say @s triggered {} : obj {}'.format(namespaced_selector, objective_name))
+	functions[pathed_selector].append('tellraw @s [{ "text": "complete:"}, { "score": { "name": "@s", "objective": "complete" } }, { "text": ", incomplete:" },{ "score": { "name": "@s", "objective": "incomplete" } }]')
 
 def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: str, parent_item_selector: str = None, parent_item_is_correct: bool = False, hidden: bool = True, gen_base_criteria: bool = True, show: bool = True, announce: bool = True):
 	selector = adv_link.selector
@@ -608,8 +608,6 @@ def get_parent_tab(loot_table_map: LootTableMap):
 			return 'village_chests'
 		else:
 			return 'chests'
-	elif loot_table_map.original.typ is eLootTable.empty:
-		return 'no_parent'
 	elif loot_table_map.original.typ is eLootTable.entity:
 		if 'sheep' in loot_table_map.path or loot_table_map.selector == 'sheep':
 			return 'sheep'
@@ -621,62 +619,10 @@ def get_parent_tab(loot_table_map: LootTableMap):
 		return 'generic_tables'
 	elif loot_table_map.original.typ is eLootTable.gift:
 		return 'gifts'
+	elif loot_table_map.original.typ is eLootTable.empty:
+		return 'no_parent'
 	else:
 		return 'no_parent'
-
-def set_child_description(adv_link: AdvItem, adv_child: AdvItem):
-	link_name = adv_link.title if adv_link.title is not None else get_upper_selector(adv_link.selector)
-	child_name = get_upper_selector(adv_child.selector)
-
-	loot_table_map = loot_table_maps[adv_link.selector]
-	
-	if adv_child.adv_item_type is eAdvItemType.item or adv_child.adv_item_type is eAdvItemType.loop:
-		item = 'This Item'
-	elif adv_child.adv_item_type is eAdvItemType.reference:
-		item = 'a {} Item'.format(child_name)
-
-	if adv_link.selector == 'sheep' or 'fishing' in loot_table_map.path:
-		action = 'Collect'
-		origin = 'From This Loot Table'
-
-	elif adv_link.selector == 'armor_stand':
-		action = 'Collect'
-		origin = 'From an Armor Stand'
-
-	elif adv_link.selector == 'player':
-		action = 'Drop'
-		origin = 'When You Die'
-
-	elif loot_table_map.original.typ is eLootTable.entity:
-		action = 'Collect'
-		origin = 'From a {}'.format(link_name)
-
-	elif adv_link.selector == 'fishing':
-		action = 'Hook'
-		origin = 'While Fishing'
-
-	elif loot_table_map.original.typ is eLootTable.block:
-		action = 'Collect'
-		origin = 'From {}'.format(link_name)
-
-	elif loot_table_map.original.typ is eLootTable.chest:
-		action = 'Find'
-		origin = 'in a {}'.format(link_name)
-
-	elif loot_table_map.original.typ is eLootTable.gift and 'hero_of_the_village' in loot_table_map.path:
-		action = 'Recieve'
-		origin = 'as a {}'.format(link_name)
-
-	elif adv_link.selector == 'cat_morning_gift':
-		action = 'Recieve'
-		origin = 'From Your Cat'
-
-	else:
-		print('Warning: unknown parent advancement type... {}'.format(adv_link))
-		action = 'Get'
-		origin = 'From {}'.format(link_name)
-	
-	adv_child.description = '{} {} {}'.format(action, item, origin)
 
 def generate_advancements(loot_table_map: LootTableMap):
 	parent = get_parent_tab(loot_table_map)
@@ -724,7 +670,6 @@ def generate_advancements(loot_table_map: LootTableMap):
 					loot_table_map.adv_length += branch_length
 
 			for adv_child in branch:
-				set_child_description(adv_link, adv_child)
 				child_pathed_selector = get_pathed_selector(adv_child.selector, path, base, link_index + 1)
 				generate_single_advancement(adv_child, child_pathed_selector, child_pathed_parent, parent_item_selector, parent_item_is_correct)
 				child_pathed_parent = get_namespaced_selector(child_pathed_selector)
@@ -786,8 +731,8 @@ for tab in tabs:
 	debug_function_list.append('advancement grant @a from {}:{}'.format(datapack_name, tab_selector))
 	setup_function_list.append('advancement grant @s only {}:{}'.format(datapack_name, tab_selector))
 
+
 print('Writing Files...')
-# Create Files
 
 zipbytes = io.BytesIO()
 zip = zipfile.ZipFile(zipbytes, 'w', zipfile.ZIP_DEFLATED, False)
