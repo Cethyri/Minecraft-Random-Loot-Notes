@@ -5,6 +5,8 @@ RLNotes is a Python project that aims to improve the minecraft randomizer experi
 
 All of RLNotes' features are contained within a vanilla datapack, so no need to install mods. Using it is simple, you can just download one of the premade datapacks, but if you would prefer a more custom pack, download the project and try out it's different flags for customization.
 
+##### Premade Packs: [#1](https://github.com/Cethyrion/Minecraft-Random-Loot-Notes/raw/master/premade/rl_notes_1.zip), [#2](https://github.com/Cethyrion/Minecraft-Random-Loot-Notes/raw/master/premade/rl_notes_2.zip), [#3](https://github.com/Cethyrion/Minecraft-Random-Loot-Notes/raw/master/premade/rl_notes_3.zip), [#4](https://github.com/Cethyrion/Minecraft-Random-Loot-Notes/raw/master/premade/rl_notes_4.zip), [#5](https://github.com/Cethyrion/Minecraft-Random-Loot-Notes/raw/master/premade/rl_notes_5.zip), [#6](https://github.com/Cethyrion/Minecraft-Random-Loot-Notes/raw/master/premade/rl_notes_6.zip), [#7](https://github.com/Cethyrion/Minecraft-Random-Loot-Notes/raw/master/premade/rl_notes_7.zip), [#8](https://github.com/Cethyrion/Minecraft-Random-Loot-Notes/raw/master/premade/rl_notes_8.zip), [#9](https://github.com/Cethyrion/Minecraft-Random-Loot-Notes/raw/master/premade/rl_notes_9.zip), [#10](https://github.com/Cethyrion/Minecraft-Random-Loot-Notes/raw/master/premade/rl_notes_10.zip)
+
 The script can be run from command line with `py rl_notes_generate.py` or `py rl_notes_generate.py [seed] [flags]`, if you ever need a refresher on the available flags, a quick reference is available by running `py rl_notes_help.py`.
 
 ## In Game
