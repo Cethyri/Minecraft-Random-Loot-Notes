@@ -8,7 +8,7 @@ All of RLNotes' features are contained within a vanilla datapack, so no need to 
 The script can be run from command line with `py rl_notes_generate.py` or `py rl_notes_generate.py [seed] [flags]`, if you ever need a refresher on the available flags, a quick reference is available by running `py rl_notes_help.py`.
 
 
-# Current Features
+## Current Features
 - **Base:**
   - Random Loot Tables:
     - Every Mob Drop, Chest Loot, Block Drop, and Gameplay Feature that uses loot tables is randomized
@@ -34,7 +34,7 @@ The script can be run from command line with `py rl_notes_generate.py` or `py rl
     - `--hide-seed`
       - Excludes your provided seed from the datapack name and description.
       
-# Planned Features:
+## Planned Features:
 - **More Flags:**
   - More flags are in the works like `--co-op` to share discoveries with other players, `--hints` for helpful hints when you're looking for new drops, and more
 - **Better Validation**
