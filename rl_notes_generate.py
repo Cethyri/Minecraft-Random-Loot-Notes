@@ -561,6 +561,7 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 
 	functions[pathed_selector].append('advancement grant @s{} only {}'.format(grant_target_selector, namespaced_selector))
 	functions[pathed_selector].append('scoreboard players reset @s[scores = {{ incomplete = 0 }}] {}'.format(objective_name))
+	functions[pathed_selector].append('execute as @s[scores = {{ incomplete = 0 }}] run say {}'.format(objective_name))
 	functions[pathed_selector].append('say @s triggered {} : obj {}'.format(namespaced_selector, objective_name))
 	functions[pathed_selector].append('tellraw @s [{ "text": "complete:"}, { "score": { "name": "@s", "objective": "complete" } }, { "text": ", incomplete:" },{ "score": { "name": "@s", "objective": "incomplete" } }]')
 
@@ -729,7 +730,7 @@ for tab in tabs:
 	generate_single_advancement(adv_tab, tab_selector, None, hidden = False, gen_base_criteria = False, show = False, announce = False)
 	advancements[tab_selector].criteria = {'randomize_your_world': Criteria.populate(eTrigger.impossible)}
 	debug_function_list.append('advancement grant @a from {}:{}'.format(datapack_name, tab_selector))
-	setup_function_list.append('advancement grant @s only {}:{}'.format(datapack_name, tab_selector))
+	# setup_function_list.append('advancement grant @s only {}:{}'.format(datapack_name, tab_selector))
 
 
 print('Writing Files...')
