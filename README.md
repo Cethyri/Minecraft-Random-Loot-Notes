@@ -7,6 +7,28 @@ All of RLNotes' features are contained within a vanilla datapack, so no need to 
 
 The script can be run from command line with `py rl_notes_generate.py` or `py rl_notes_generate.py [seed] [flags]`, if you ever need a refresher on the available flags, a quick reference is available by running `py rl_notes_help.py`.
 
+## In Game
+### Advancement Trees
+
+Trees are separated into multiple tabs so you don't have to scroll for hours to get to each tree in the advancement window. You can hover over each icon to see what block, item, gameplay mechanic, or entity it is/represents. Descriptions tell you the page so you can find the entry after the notification pops up.
+
+<img width="33.33%" src="exampleImages/Tree 3.png"><img width="33.33%" src="exampleImages/Tree 2.png"><img width="33.33%" src="exampleImages/Tree 2.png">
+
+
+### Recipes
+
+Recipes with the knowledge book are RLNotes Recipes allowing you to search by drop and find the source.
+
+<img width="50%" src="exampleImages/Recipe 1.png"><img width="50%" src="exampleImages/Recipe 2.png">
+
+Recipes are grouped by drop so you can compare all of the possible sources of an item.
+
+<img width="50%" src="exampleImages/Recipe Group 2.png"><img width="50%" src="exampleImages/Recipe Group 3.png">
+
+There's also a bit more information hidden in the recipe. The number of items indicates the RLNotes Tab where you can find the entry, and the red warning (barrier icon) lets you know that some part of the recipe is a placeholder (zombie spawn egg in the place of zombie for example)
+
+<img width="50%" src="exampleImages/Recipe Group 1.png">
+
 
 ## Current Features
 - **Base:**
