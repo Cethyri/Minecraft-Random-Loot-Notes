@@ -1,20 +1,24 @@
 {
   "hardcore": {
-    "explanation": "Excludes the player loot table from randomization."
+    "explanation": "Excludes the player loot table from randomization.",
+    "warning": "Using a seed with this flag will not generate the same loot tables as without it."
   },
   "update": {
-    "explanation": "Attempts to create the datapack using pre-randomized loot-tables that you provide in the \"randomized\" folder"
+    "explanation": "Attempts to create the datapack using pre-randomized loot-tables that you provide in the \"randomized\" folder.",
+    "warning": "Using a seed with this flag will not generate the same loot tables as without it."
   },
   "no-cheats": {
-    "explanation": "Excludes loot tables in \"requires_cheats.json\" from randomization"
+    "explanation": "Excludes loot tables in \"requires_cheats.json\" from randomization.",
+    "warning": "Using a seed with this flag will not generate the same loot tables as without it."
   },
   "no-dead-ends": {
-    "explanation": "Excludes loot tables that drop nothing from randomization"
+    "explanation": "Excludes loot tables that drop nothing from randomization.",
+    "warning": "Using a seed with this flag will not generate the same loot tables as without it."
   },
   "save-seed": {
-    "explanation": "Includes the randomly generated seed in the datapack name and description"
+    "explanation": "Includes the randomly generated seed in the datapack name and description."
   },
   "hide-seed": {
-    "explanation": "Excludes your provided seed from the datapack name and description"
+    "explanation": "Excludes your provided seed from the datapack name and description."
   }
 }
