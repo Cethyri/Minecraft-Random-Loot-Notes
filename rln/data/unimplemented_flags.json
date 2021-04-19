@@ -1,29 +1,23 @@
 {
-  "fill-dead-ends": {
-    "explanation": "Replaces empty loot tables with another random loot table"
-  },
-  "loot-hints": {
-    "explanation": ""
-  },
-  "empty-loot-hints": {
-    "explanation": ""
-  },
-  "all-hints": {
-    "explanation": ""
-  },
-  "show-next": {
-    "explanation": ""
-  },
-  "show-no-drops": {
-    "explanation": ""
-  },
-  "show-all": {
-    "explanation": ""
-  },
-  "validate": {
-    "explanation": ""
-  },
-  "co-op": {
-    "explanation": ""
-  }
+	"loot-hints": {
+		"explanation": ""
+	},
+	"empty-loot-hints": {
+		"explanation": ""
+	},
+	"all-hints": {
+		"explanation": ""
+	},
+	"show-next": {
+		"explanation": ""
+	},
+	"show-no-drops": {
+		"explanation": ""
+	},
+	"show-all": {
+		"explanation": ""
+	},
+	"validate": {
+		"explanation": ""
+	}
 }

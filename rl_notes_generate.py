@@ -11,7 +11,7 @@ from typing import Dict, List, Callable
 
 from rln.loot_table_map import LootTableMap, populate_advancement_chain, AdvItem, eAdvItemType, validate_conditions
 
-from rln.helpers.regex import fix_a_an, get_upper_selector, shorten_selector
+from rln.helpers.regex import fix_a_an, get_upper_selector, shorten_selector, remove_initial_dashes
 
 from rln.mc.interactable import MCActionInfo, eItemType, eActionType
 
@@ -24,6 +24,7 @@ from rln.mc.data_structures.item import Item
 from rln.mc.data_structures.entity import Entity
 from rln.mc.data_structures.recipe import CraftingShaped, eRecipe, Ingredient, Result
 
+print('Checking flags and setting up...')
 
 with open('rln/data/flags.json') as json_file:
 	flags_from_json = json.load(json_file)
@@ -32,50 +33,46 @@ with open('rln/data/flags.json') as json_file:
 		flags[flag] = False
 
 seed_given = False
-flags_used = 0
+flags_used = False
 if len(sys.argv) > 1:
 	argstart = 1
-	if not sys.argv[1].startswith('--'):
+	if not sys.argv[1].startswith('-'):
 		argstart = 2
-		try:
-			seed = int(sys.argv[1])
-			seed_given = True
-		except Exception:
-			print('The seed "{}" is not an integer.'.format(sys.argv[1]))
-			exit()
+		seed = sys.argv[1]
+		seed_given = True
+		print(f'Using {seed} as the seed')
 
 	for i in range(argstart, len(sys.argv)):
-		arg = sys.argv[i].replace('--', '', 1)
+		arg = remove_initial_dashes(sys.argv[i])
 		if arg in flags:
 			flags[arg] = True
-			flags_used += 1
+			flags_used = True
 		else:
-			print('{} is not a recognized flag, ignoring...'.format(arg))
+			print(f'{sys.argv[i]} is not a recognized flag, ignoring...')
 
-if seed_given:	
-	random.seed(seed)
-	datapack_name = 'rl_notes_{}'.format(seed)
-	datapack_desc = 'Loot Table Randomizer With Notes, Seed: {}'.format(seed)
+if not seed_given:	
+	seed = random.randint(-sys.maxsize, sys.maxsize)
+	if not flags['save-seed']:
+		print('If you want to use a specific randomizer seed, use: "python randomize.py <seed>".')
+
+if (seed_given and not flags['hide-seed']) or (flags['save-seed'] and not seed_given):
+	datapack_name = f'rl_notes_{seed}'
 else:
-	if not seed_given:
-		seed = random.randint(-sys.maxsize, sys.maxsize)
-		if not flags['save-seed']:
-			print('If you want to use a specific randomizer seed integer, use: "python randomize.py <seed>".')
+	datapack_name = 'rl_notes'
 
-	if (seed_given and not flags['hide-seed']) or (flags['save-seed'] and not seed_given):
-		datapack_name = 'rl_notes_{}'.format(seed)
-		datapack_desc = 'Loot Table Randomizer With Notes, Seed: {}'.format(seed)
-	else:
-		datapack_name = 'rl_notes'
-		datapack_desc = 'Loot Table Randomizer With Notes'
+random.seed(seed)
+datapack_desc = f'Loot Table Randomizer With Notes, Seed: "{seed}"'
 
-if flags_used == 0:
-	print('Customization is available through flags. If you would like to see a list of flags use: "python rl_notes_help.py')
+if not flags_used:
+	print('Customization is available through flags. If you would like to see a list of flags use: "python rl_notes_help.py"')
 	
 datapack_filename = datapack_name + '.zip'
 
-
 print(flags)
+
+notesGrantSelector = '@s'
+if (flags['co-op']):
+	notesGrantSelector = '@a'
 
 
 print('Generating datapack...')
@@ -83,11 +80,10 @@ print('Generating datapack...')
 loot_table_maps: Dict[str, LootTableMap] = {}
 remaining_selectors: List[str] = []
 
-
 update_pre_randomized = os.path.exists('randomized') and flags['update']
 if update_pre_randomized:
-	datapack_name = '{}_upd'.format(datapack_name)
-	datapack_desc = '{}_upd'.format(datapack_desc)
+	datapack_name = f'{datapack_name}_upd'
+	datapack_desc = f'{datapack_desc}_upd'
 	datapack_filename = datapack_name + '.zip'
 
 selectors_to_remapped = {}
@@ -153,7 +149,7 @@ def randomize():
 			remapped_json = selectors_to_remapped[selector]
 
 			if remapped_json not in original_to_selector:
-				#print('checking if {} remapped is outdated version of a current loot_table'.format(selector))
+				#print(f'checking if {selector} remapped is outdated version of a current loot_table')
 				for ood_remapped_selector in loot_table_maps:
 					if ood_remapped_selector not in outdated:
 						original_table = loot_table_maps[ood_remapped_selector].original
@@ -177,7 +173,7 @@ def randomize():
 				loot_table_maps[selector].remap_selector = remapped_selector
 				loot_table_maps[selector].remapped = LootTable(json.loads(json.dumps(remapped_table))) #Deep Copy
 			else:
-				print('failed to find matching table for {}'.format(selector))
+				print(f'failed to find matching table for {selector}')
 
 	else:
 		for selector in loot_table_maps:
@@ -193,7 +189,7 @@ print('Validating loot tables...')
 
 def validate():
 	for selector in loot_table_maps:
-		# print('Validating: {}'.format(selector))
+		# print(f'Validating: {selector}')
 		validate_conditions(loot_table_maps[selector])
 validate()
 		
@@ -202,7 +198,7 @@ print('Populating Advancement chains...')
 
 def populate():
 	for selector in loot_table_maps:
-		# print('Populating chain for: {}'.format(selector))
+		# print(f'Populating chain for: {selector}')
 		populate_advancement_chain(selector, loot_table_maps)
 		for adv_item in loot_table_maps[selector].adv_chain:
 			if adv_item.selector != selector:
@@ -214,12 +210,9 @@ print('Generating Advancements...')
 
 with open('rln/mc/data/double_tall_blocks.json') as json_file:
 	double_tall_blocks = json.load(json_file)
-		
-tabs_possible_images: Dict[str, List[str]] = {}
+
 tabs: List[str] = []
 advancements: Dict[str, Advancement] = {}
-
-
 
 rl_notes_item = 'writable_book'
 current_advs_and_recipes = []
@@ -228,36 +221,51 @@ recipes: Dict[str, CraftingShaped] = {}
 
 objective_num = 0
 functions: Dict[str, List[str]] = {}
-
-reset_function_list = [
+functions['load'] = [
+	f'execute unless score debug rln_loaded = 1 run function {datapack_name}:add',
+	'scoreboard objectives add rln_loaded dummy',
+	'scoreboard players set debug rln_loaded 1',
+	'scoreboard objectives add show_debug trigger ["",{"text":"Debug"}]',
 	'tellraw @a ["",{"text":"Loot table randomizer with notes, by Cethyrion, adapted from SethBling\'s Loot table randomizer","color":"green"}]',
-	'scoreboard objectives add incomplete dummy',
-	'scoreboard objectives add complete dummy',
-	'scoreboard objectives add ref_complete dummy',
-	'scoreboard objectives add setup dummy',
 ]
-setup_function_list = [
-	'scoreboard players set @a setup 1',
-	'say setup @s\'s RLNotes'
+functions['add'] = [
+	'scoreboard objectives add rln_setup dummy',
+	'scoreboard objectives add rln_complete dummy',
+	'scoreboard objectives add rln_incomplete dummy',
+	'scoreboard objectives add rln_ref_complete dummy',
 ]
-debug_function_list = [
-	'advancement revoke @a everything',
-	'recipe take @a *'
+functions['tick'] = [
+	f'execute as @a unless score @s rln_setup = 1 run function {datapack_name}:setup'
 ]
-remove_function_list = [
-	'advancement revoke @a everything',
-	'recipe take @a *',
+functions['setup'] = [
+	'scoreboard players set @s rln_setup 1',
+	'tellraw @s ["",{"selector":"say rln_setup @s\'s RLNotes","color":"green"}]',
 ]
-tick_function_list = [
-	'execute as @a unless entity @s[scores = {{ setup = 1 }}] run function {}:setup'.format(datapack_name),
-	'execute as @a[scores = {{ tab_setup = 0.. }}] run function {}:tabs'.format(datapack_name)
+functions['debug'] = [
+	f'function {datapack_name}:reset',
+]
+functions['reset'] = [
+	'scoreboard players set debug rln_loaded 0'
+	f'function {datapack_name}:remove',
+	f'function {datapack_name}:load',
+]
+functions['remove'] = [
+	'scoreboard objectives remove rln_setup',
+	'scoreboard objectives remove rln_complete',
+	'scoreboard objectives remove rln_incomplete',
+	'scoreboard objectives remove rln_ref_complete',
+]
+functions['uninstall'] = [
+	f'function {datapack_name}:remove',
+	'scoreboard objectives remove rln_loaded',
+	'scoreboard objectives remove show_debug',
 ]
 
 def get_minecraft_selector(selector: str):
-	return 'minecraft:{}'.format(selector)
+	return f'minecraft:{selector}'
 
 def get_namespaced_selector(pathed_selector: str, additional: str = None):
-	return '{}:{}{}'.format(datapack_name, pathed_selector, additional if additional is not None else '')
+	return f'{datapack_name}:{pathed_selector}{additional if additional is not None else ""}'
 
 def sheep_color_to_number(color: str):
 	if color == 'white':
@@ -293,18 +301,18 @@ def sheep_color_to_number(color: str):
 	if color == 'black':
 		return 15
 	else:
-		print('SHEEP COLOR BROKEN! {}'.format(color))
+		print(f'SHEEP COLOR BROKEN! {color}')
 
 def get_pathed_selector(selector: str, path: str, base: str, link_index: int):
-	name = '{}-{}'.format(link_index, selector) if link_index >= 0 else selector
+	name = f'{link_index}-{selector}' if link_index >= 0 else selector
 	return os.path.join(path, base, name).replace('\\', '/')
 
 def generate_recipe(pathed_selector: str, parent_item_selector: str, parent_item_is_correct: bool, child_item_selector: str, child_item_is_correct: bool, group_selector: str):
 	recipe = CraftingShaped()
 	recipe.typ = eRecipe.crafting_shaped
-	recipe.group = 'rl_notes_{}'.format(group_selector)
+	recipe.group = f'rl_notes_{group_selector}'
 	recipe.pattern = [
-		'{}I'.format(' ' if parent_item_is_correct and child_item_is_correct else 'B'),
+		f'{" " if parent_item_is_correct and child_item_is_correct else "B"}I',
 		'PK'
 	]
 
@@ -314,16 +322,17 @@ def generate_recipe(pathed_selector: str, parent_item_selector: str, parent_item
 	parent.item = parent_item_selector
 	child = Ingredient()
 	child.item = child_item_selector
+	barrier = Ingredient()
+	barrier.item = 'minecraft:barrier'
 
 	recipe.key = {
 		'I': child,
 		'P': parent,
-		'K': knowledge_book
+		'K': knowledge_book,
+		'B': barrier
 	}
-	if not parent_item_is_correct or not child_item_is_correct:
-		barrier = Ingredient()
-		barrier.item = 'minecraft:barrier'
-		recipe.key['B'] = barrier,
+	if parent_item_is_correct and child_item_is_correct:
+		del recipe.key['B']
 	
 	recipe.result = Result()
 	recipe.result.count = 1
@@ -334,8 +343,8 @@ def generate_recipe(pathed_selector: str, parent_item_selector: str, parent_item
 
 def generate_children_functions(pathed_selector: str, start_link: AdvItem, path: str, base: str, child_index: int, execute_conditions_list: List[Callable]):
 	
-	functions[pathed_selector].append('scoreboard players set @s incomplete 0')
-	functions[pathed_selector].append('scoreboard players set @s complete 0')
+	functions[pathed_selector].append('scoreboard players set @s rln_incomplete 0')
+	functions[pathed_selector].append('scoreboard players set @s rln_complete 0')
 			
 	references = []
 	search_queue = [start_link]
@@ -351,7 +360,7 @@ def generate_children_functions(pathed_selector: str, start_link: AdvItem, path:
 		current_map = loot_table_maps[cur_link.selector]
 
 		if is_reference:
-			functions[pathed_selector].append('scoreboard players set @s ref_complete 0')
+			functions[pathed_selector].append('scoreboard players set @s rln_ref_complete 0')
 
 		references.append(current_map.selector)
 
@@ -367,13 +376,13 @@ def generate_children_functions(pathed_selector: str, start_link: AdvItem, path:
 			namespaced_selector = get_namespaced_selector(child_pathed_selector)
 			if adv_child.adv_item_type is not eAdvItemType.reference and adv_child.selector == adv_child.item_selector:
 				for execute_conditions in execute_conditions_list:
-					functions[pathed_selector].append('execute {} run advancement grant @s only {}'.format(execute_conditions(adv_child), namespaced_selector))
-				functions[pathed_selector].append('recipe give @s[advancements = {{ {0} = true }}] {0}'.format(namespaced_selector))
-				functions[pathed_selector].append('scoreboard players add @s[advancements = {{ {} = true }}] complete 1'.format(namespaced_selector))
-				functions[pathed_selector].append('scoreboard players add @s[advancements = {{ {} = false }}] incomplete 1'.format(namespaced_selector))
+					functions[pathed_selector].append(f'execute {execute_conditions(adv_child)} run advancement grant @s only {namespaced_selector}')
+				functions[pathed_selector].append(f'recipe give @s[advancements = {{ {namespaced_selector} = true }}] {namespaced_selector}')
+				functions[pathed_selector].append(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = true }}] rln_complete 1')
+				functions[pathed_selector].append(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = false }}] rln_incomplete 1')
 				
 				if is_reference:
-					functions[pathed_selector].append('scoreboard players add @s[advancements = {{ {} = true }}] ref_complete 1'.format(namespaced_selector))
+					functions[pathed_selector].append(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = true }}] rln_ref_complete 1')
 
 			elif adv_child.adv_item_type is eAdvItemType.reference and adv_child.selector not in references:
 				search_queue.append(adv_child)
@@ -381,8 +390,8 @@ def generate_children_functions(pathed_selector: str, start_link: AdvItem, path:
 
 		if is_reference:
 			root_namespaced_selector = get_namespaced_selector(get_pathed_selector(cur_link.selector, path, base, 0))
-			functions[pathed_selector].append('advancement grant @s[scores = {{ ref_complete = 1.. }}] only {}'.format(reference_namespaced_selectors[cur_link.selector]))
-			functions[pathed_selector].append('advancement grant @s[scores = {{ ref_complete = 1.. }}] only {}'.format(root_namespaced_selector))
+			functions[pathed_selector].append(f'advancement grant @s[scores = {{ rln_ref_complete = 1.. }}] only {reference_namespaced_selectors[cur_link.selector]}')
+			functions[pathed_selector].append(f'advancement grant @s[scores = {{ rln_ref_complete = 1.. }}] only {root_namespaced_selector}')
 		else:
 			is_reference = True
 
@@ -394,13 +403,13 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 
 	loot_table_map = loot_table_maps[adv_link.selector]
 
-	helper_selector = "helper/{}".format(pathed_selector)
+	helper_selector = f'helper/{pathed_selector}'
 	namespaced_helper = get_namespaced_selector(helper_selector)
 	namespaced_selector = get_namespaced_selector(pathed_selector)
 	
 	functions[pathed_selector] = []
 
-	objective_name = '{}_r{}'.format(shorten_selector(adv_link.selector), objective_num)
+	objective_name = f'{shorten_selector(adv_link.selector)}_r{objective_num}'
 	if len(objective_name) > 16:
 		print(objective_name)
 	objective_num += 1
@@ -408,17 +417,17 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	use_helper = False
 	reset_objective = False
 	execute_conditions_list = []
-	grant_target_selector = '[scores = { incomplete = 0 }]'
+	grant_target_selector = '[scores = { rln_incomplete = 0 }]'
 	child_index = link_index + 1
 
 	if adv_link.selector == 'sheep' or 'fishing' in loot_table_map.path:
 		return
 	
 	elif adv_link.selector == 'armor_stand':
-		tick_function_list.append('execute as @a[scores = {{ {} = 0.. }}] at @s at @e[distance = ..8, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item: {{ id:"minecraft:armor_stand" }}}}] run function {}'.format(objective_name, namespaced_selector))
+		functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 0.. }}] at @s at @e[distance = ..8, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item: {{ id:"minecraft:armor_stand" }} }}] run function {namespaced_selector}')
 
 		execute_conditions_list = [
-			lambda adv_child: 'if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_child.item_selector)
+			lambda adv_child: f'if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
 		]
 
 		grant_target_selector = ''
@@ -427,23 +436,23 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 		for i in range(10):
 			score = i + 1
 			distance = score / 2
-			tick_function_list.append('execute as @a[scores = {{ {0} = 0 }}] at @s anchored eyes if block ^ ^ ^{1} minecraft:{2} run scoreboard players set @s {0} {3}'.format(objective_name, distance, adv_link.selector, score))
-			tick_function_list.append('execute as @a[scores = {{ {0} = {3} }}] at @s anchored eyes unless block ^ ^ ^{1} minecraft:{2} positioned ^ ^ ^{1} run function {4}'.format(objective_name, distance, adv_link.selector, score, namespaced_selector))
+			functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 0 }}] at @s anchored eyes if block ^ ^ ^{distance} minecraft:{adv_link.selector} run scoreboard players set @s {objective_name} {score}')
+			functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = {score} }}] at @s anchored eyes unless block ^ ^ ^{distance} minecraft:{adv_link.selector} positioned ^ ^ ^{distance} run function {namespaced_selector}')
 			
 		execute_conditions_list = [
-			lambda adv_child: 'unless block ~ ~ ~ minecraft:{} if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_link.selector, adv_child.item_selector)
+			lambda adv_child: f'unless block ~ ~ ~ minecraft:{adv_link.selector} if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
 		]
 		
 		reset_objective = True
 		grant_target_selector = ''
 
 	elif loot_table_map.original.typ is eLootTable.block:
-		objective_criteria = 'minecraft.mined:minecraft.{}'.format(adv_link.selector)
+		objective_criteria = f'minecraft.mined:minecraft.{adv_link.selector}'
 
-		tick_function_list.append('execute as @a[scores = {{ {} = 1.. }}] at @s run function {}'.format(objective_name, namespaced_selector))
+		functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 1.. }}] at @s run function {namespaced_selector}')
 
 		execute_conditions_list = [
-			lambda adv_child: 'if entity @e[distance = ..8, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_child.item_selector)
+			lambda adv_child: f'if entity @e[distance = ..8, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
 		]
 
 		reset_objective = True
@@ -455,11 +464,11 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 		for i in range(10):
 			score = i + 1
 			distance = score / 2
-			tick_function_list.append('execute as @a[scores = {{ {0} = 0 }}] at @s anchored eyes if block ^ ^ ^{1} minecraft:chest{{ LootTable: "minecraft:{2}" }} run scoreboard players set @s {0} {3}'.format(objective_name, distance, loot_table_pathed_selector, score))
-			tick_function_list.append('execute as @a[scores = {{ {0} = {3} }}] at @s anchored eyes unless block ^ ^ ^{1} minecraft:chest{{ LootTable: "minecraft:{2}" }} positioned ^ ^ ^{1} run function {4}'.format(objective_name, distance, loot_table_pathed_selector, score, namespaced_selector))
+			functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 0 }}] at @s anchored eyes if block ^ ^ ^{distance} minecraft:chest{{ LootTable: "minecraft:{loot_table_pathed_selector}" }} run scoreboard players set @s {objective_name} {score}')
+			functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = {score} }}] at @s anchored eyes unless block ^ ^ ^{distance} minecraft:chest{{ LootTable: "minecraft:{loot_table_pathed_selector}" }} positioned ^ ^ ^{distance} run function {namespaced_selector}')
 			
 		execute_conditions_list = [
-			lambda adv_child: 'if block ~ ~ ~ minecraft:chest{{ Items: [{{ id: "minecraft:{}" }}] }}'.format(adv_child.item_selector)
+			lambda adv_child: f'if block ~ ~ ~ minecraft:chest{{ Items: [{{ id: "minecraft:{adv_child.item_selector}" }}] }}'
 		]
 		
 		reset_objective = True
@@ -467,22 +476,22 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	elif loot_table_map.original.typ is eLootTable.gift and 'hero_of_the_village' in loot_table_map.path:
 		villager_type = adv_link.selector.replace('_gift', '')
 
-		tick_function_list.append('execute as @a[scores = {{ {} = 0.. }}, nbt = {{ ActiveEffects: [{{ Id: 32b }}] }}] at @s at @e[distance = ..8, type = minecraft:villager, nbt = {{ VillagerData: {{ profession:"minecraft:{}" }} }}] run function {}'.format(objective_name, villager_type, namespaced_selector))
+		functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 0.. }}, nbt = {{ ActiveEffects: [{{ Id: 32b }}] }}] at @s at @e[distance = ..8, type = minecraft:villager, nbt = {{ VillagerData: {{ profession:"minecraft:{villager_type}" }} }}] run function {namespaced_selector}')
 		
 		execute_conditions_list = [
-			lambda adv_child: 'if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_child.item_selector)
+			lambda adv_child: f'if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
 		]
 
 	elif adv_link.selector == 'cat_morning_gift':
 		objective_name = 'sleeping'
 		objective_num -= 1
 
-		tick_function_list.append('execute as @a[scores = { sleeping = 0.. }] store result score @s sleeping run data get entity @s SleepTimer')
-		tick_function_list.append('execute as @a[scores = {{ sleeping = 101 }}] at @s at @e[distance = ..16, type = minecraft:cat] run function {}'.format(namespaced_selector))
+		functions['tick'].append('execute as @a[scores = { sleeping = 0.. }] store result score @s sleeping run data get entity @s SleepTimer')
+		functions['tick'].append(f'execute as @a[scores = {{ sleeping = 101 }}] at @s at @e[distance = ..16, type = minecraft:cat] run function {namespaced_selector}')
 
 		execute_conditions_list = [
-			lambda adv_child: 'if entity @e[distance = ..4, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_child.item_selector),
-			lambda adv_child: 'as @s[nbt = {{ Inventory: [{{ id: "minecraft:{}" }}] }}]'.format(adv_child.item_selector)
+			lambda adv_child: f'if entity @e[distance = ..4, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]',
+			lambda adv_child: f'as @s[nbt = {{ Inventory: [{{ id: "minecraft:{adv_child.item_selector}" }}] }}]'
 		]
 
 	elif loot_table_map.original.typ is eLootTable.entity:
@@ -508,12 +517,12 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 
 		advancements[helper_selector].rewards = Rewards()
 		advancements[helper_selector].rewards.function = namespaced_helper
-		functions[helper_selector] = ['scoreboard players set @a {} 1'.format(objective_name)]
+		functions[helper_selector] = [f'scoreboard players set @a {objective_name} 1']
 		
-		tick_function_list.append('execute as @a[scores = {{ {} = 1.. }}] at @s run function {}'.format(objective_name, namespaced_selector))
+		functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 1.. }}] at @s run function {namespaced_selector}')
 
 		execute_conditions_list = [
-			lambda adv_child: 'if entity @e[distance = ..64, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_child.item_selector)
+			lambda adv_child: f'if entity @e[distance = ..64, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
 		]
 
 		reset_objective = True
@@ -531,39 +540,41 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 
 		advancements[helper_selector].rewards = Rewards()
 		advancements[helper_selector].rewards.function = namespaced_helper
-		functions[helper_selector] = ['scoreboard players set @a {} 1'.format(objective_name)]
+		functions[helper_selector] = [f'scoreboard players set @a {objective_name} 1']
 
-		tick_function_list.append('execute as @a[scores = {{ {} = 1.. }}] at @s run function {}'.format(objective_name, namespaced_selector))
+		functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 1.. }}] at @s run function {namespaced_selector}')
 				
 		parent_name = get_upper_selector(adv_link.selector)
-		advancements[pathed_selector].display.description = "{} Loot Table Reference".format(parent_name)
+		advancements[pathed_selector].display.description = f'{parent_name} Loot Table Reference'
 
 		execute_conditions_list = [
-			lambda adv_child: 'if entity @e[distance = ..64, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item:{{ id:"minecraft:{}" }}}}]'.format(adv_child.item_selector)
+			lambda adv_child: f'if entity @e[distance = ..64, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
 		]
 
 		reset_objective = True
 		grant_target_selector = ''
 
 	else:
-		print("No problem!")
-		print("...{}".format(adv_link))
-		print("Didn't Work!")
+		print('No problem!')
+		print(adv_link)
+		print('Didn\'t Work!')
 
 	generate_children_functions(pathed_selector, adv_link, path, base, child_index, execute_conditions_list)
 
-	reset_function_list.append('scoreboard objectives add {} {}'.format(objective_name, objective_criteria))
-	setup_function_list.append('scoreboard players set @a {} 0'.format(objective_name))
-	if reset_objective:
-		functions[pathed_selector].append('scoreboard players set @s {} 0'.format(objective_name))
-	if use_helper:
-		functions[pathed_selector].append('advancement revoke @s[scores = {{ incomplete = 1.. }}] only {}'.format(namespaced_helper))
+	functions['reset'].append(f'scoreboard objectives add {objective_name} {objective_criteria}')
+	functions['setup'].append(f'scoreboard players set @s {objective_name} 0')
+	functions['remove'].append(f'scoreboard objectives remove {objective_name}')
 
-	functions[pathed_selector].append('advancement grant @s{} only {}'.format(grant_target_selector, namespaced_selector))
-	functions[pathed_selector].append('scoreboard players reset @s[scores = {{ incomplete = 0 }}] {}'.format(objective_name))
-	functions[pathed_selector].append('execute as @s[scores = {{ incomplete = 0 }}] run say {}'.format(objective_name))
-	functions[pathed_selector].append('say @s triggered {} : obj {}'.format(namespaced_selector, objective_name))
-	functions[pathed_selector].append('tellraw @s [{ "text": "complete:"}, { "score": { "name": "@s", "objective": "complete" } }, { "text": ", incomplete:" },{ "score": { "name": "@s", "objective": "incomplete" } }]')
+	if reset_objective:
+		functions[pathed_selector].append(f'scoreboard players set @s {objective_name} 0')
+	if use_helper:
+		functions[pathed_selector].append(f'advancement revoke @s[scores = {{ rln_incomplete = 1.. }}] only {namespaced_helper}')
+
+	functions[pathed_selector].append(f'advancement grant @s{grant_target_selector} only {namespaced_selector}')
+	functions[pathed_selector].append(f'scoreboard players reset @s[scores = {{ rln_incomplete = 0 }}] {objective_name}')
+	
+	functions[pathed_selector].append(f'execute if @s show_debug = 1 run tell @s @s triggered {namespaced_selector} : obj {objective_name}')
+	functions[pathed_selector].append('execute if @s show_debug = 1 run tellraw @s [{ "text": "complete:"}, { "score": { "name": "@s", "objective": "rln_complete" } }, { "text": ", rln_incomplete:" },{ "score": { "name": "@s", "objective": "incomplete" } }]')
 
 def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: str, parent_item_selector: str = None, parent_item_is_correct: bool = False, hidden: bool = True, gen_base_criteria: bool = True, show: bool = True, announce: bool = True):
 	selector = adv_link.selector
@@ -655,7 +666,7 @@ def generate_advancements(loot_table_map: LootTableMap):
 		generate_single_advancement(adv_link, pathed_selector, pathed_parent, parent_item_selector, parent_item_is_correct)
 		
 		parent_selector = adv_link.selector
-		parent_item_selector = "minecraft:{}".format(adv_link.item_selector)
+		parent_item_selector = f'minecraft:{adv_link.item_selector}'
 		parent_item_is_correct = adv_link.item_selector == adv_link.selector
 		pathed_parent = get_namespaced_selector(pathed_selector)
 
@@ -689,11 +700,11 @@ def generate_advancements(loot_table_map: LootTableMap):
 		if loot_table_map.adv_length == 1:
 			tab_name = 'no_drops'
 		elif loot_table_map.adv_length < 8:
-			tab_name = '{}_short'.format(parent)
+			tab_name = f'{parent}_short'
 		elif loot_table_map.adv_length < 16 and parent == 'entities':
-			tab_name = '{}_medium_short'.format(parent)
+			tab_name = f'{parent}_medium_short'
 		elif loot_table_map.adv_length >= 24 and parent == 'entities':
-			tab_name = '{}_long'.format(parent)
+			tab_name = f'{parent}_long'
 
 		advancements[first_path].parent = get_namespaced_selector(tab_name)
 	
@@ -706,31 +717,33 @@ def generate_advancements(loot_table_map: LootTableMap):
 
 count = 0
 for loot_table_map in loot_table_maps.values():
-	# print('Generating Advancements for: {}'.format(loot_table_map.selector))
+	# print(f'Generating Advancements for: {loot_table_map.selector}')
 	if not loot_table_map.is_sub:
 		current_advs_and_recipes = []
 		generate_advancements(loot_table_map)
 		count += 1
-# print('{} trees'.format(count))
+# print(f'{count} trees')
 
 page = 0
 for tab in tabs:
 	page += 1
 
+	parent = f'rlnotes_tab_{page}'
+
 	for stuff in tabbed_advs_and_recipes[tab]:
 		if isinstance(stuff, Advancement):
-			stuff.display.description = 'On RLNotes Tab {}'.format(page)
+			stuff.display.description = f'On RLNotes Tab {page}'
+			stuff.parent = parent
 		elif isinstance(stuff, CraftingShaped):
 			stuff.result.count = page
 
-	tab_selector = get_pathed_selector(tab, '', '', -1)
+	tab_selector = get_pathed_selector(parent, '', '', -1)
 
-	title = 'RLNotes Tab {}'.format(page)
-	adv_tab = AdvItem.populate(tab, eAdvItemType.tab, rl_notes_item, title, 'An RLNotes Tab')
+	title = f'RLNotes Tab {page}'
+	adv_tab = AdvItem.populate(parent, eAdvItemType.tab, rl_notes_item, title, 'An RLNotes Tab')
 	generate_single_advancement(adv_tab, tab_selector, None, hidden = False, gen_base_criteria = False, show = False, announce = False)
-	advancements[tab_selector].criteria = {'randomize_your_world': Criteria.populate(eTrigger.impossible)}
-	debug_function_list.append('advancement grant @a from {}:{}'.format(datapack_name, tab_selector))
-	# setup_function_list.append('advancement grant @s only {}:{}'.format(datapack_name, tab_selector))
+	advancements[tab_selector].criteria = {'take_notes': Criteria.populate(eTrigger.impossible)}
+	functions['debug'].append(f'advancement grant @a from {datapack_name}:{tab_selector}')
 
 
 print('Writing Files...')
@@ -739,34 +752,28 @@ zipbytes = io.BytesIO()
 zip = zipfile.ZipFile(zipbytes, 'w', zipfile.ZIP_DEFLATED, False)
 
 for file_name, loot_table_map in loot_table_maps.items():
-	# print('Writing Loot Table for: {}'.format(file_name))
-	zip.writestr(os.path.join('data/minecraft/loot_tables', loot_table_map.file_path, '{}.json'.format(file_name)), loot_table_map.contents)
+	# print(f'Writing Loot Table for: {file_name}')
+	zip.writestr(os.path.join('data/minecraft/loot_tables', loot_table_map.file_path, f'{file_name}.json'), loot_table_map.contents)
 
 for full_path, advancement in advancements.items():
-	# print('Writing Advancement for: {}'.format(full_path))
-	zip.writestr(os.path.join('data/{}/advancements'.format(datapack_name), '{}.json'.format(full_path)), json.dumps(advancement))
+	# print(f'Writing Advancement for: {full_path}')
+	zip.writestr(os.path.join(f'data/{datapack_name}/advancements', f'{full_path}.json'), json.dumps(advancement))
 
 for full_path, function_list in functions.items():
-	# print('Writing Functions for: {}'.format(full_path))
-	zip.writestr(os.path.join('data/{}/functions'.format(datapack_name), '{}.mcfunction'.format(full_path)), "\n".join(function_list))
+	# print(f'Writing Functions for: {full_path}')
+	zip.writestr(os.path.join(f'data/{datapack_name}/functions', f'{full_path}.mcfunction'), '\n'.join(function_list))
 
 for full_path, recipe in recipes.items():
-	# print('Writing Recipe for: {}'.format(full_path))
-	zip.writestr(os.path.join('data/{}/recipes'.format(datapack_name), '{}.json'.format(full_path)), json.dumps(recipe))
+	# print(f'Writing Recipe for: {full_path}')
+	zip.writestr(os.path.join(f'data/{datapack_name}/recipes', f'{full_path}.json'), json.dumps(recipe))
 	
 zip.writestr('pack.mcmeta', json.dumps({'pack':{'pack_format':1, 'description':datapack_desc}}, indent=4))
 
-zip.writestr('data/minecraft/tags/functions/load.json', json.dumps({'values':['{}:reset'.format(datapack_name)]}))
-zip.writestr('data/minecraft/tags/functions/tick.json', json.dumps({'values':['{}:tick'.format(datapack_name)]}))
-
-zip.writestr('data/{}/functions/reset.mcfunction'.format(datapack_name), "\n".join(reset_function_list))
-zip.writestr('data/{}/functions/tick.mcfunction'.format(datapack_name), "\n".join(tick_function_list))
-zip.writestr('data/{}/functions/setup.mcfunction'.format(datapack_name), "\n".join(setup_function_list))
-zip.writestr('data/{}/functions/debug.mcfunction'.format(datapack_name), "\n".join(debug_function_list))
-zip.writestr('data/{}/functions/remove.mcfunction'.format(datapack_name), "\n".join(remove_function_list))
+zip.writestr('data/minecraft/tags/functions/load.json', json.dumps({'values':[f'{datapack_name}:load']}))
+zip.writestr('data/minecraft/tags/functions/tick.json', json.dumps({'values':[f'{datapack_name}:tick']}))
 	
 zip.close()
 with open(datapack_filename, 'wb') as file:
 	file.write(zipbytes.getvalue())
 		
-print('Created datapack "{}"'.format(datapack_filename))
+print(f'Created datapack "{datapack_filename}"')

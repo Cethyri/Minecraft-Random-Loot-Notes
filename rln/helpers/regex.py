@@ -12,3 +12,6 @@ def get_upper_selector(selector):
 def shorten_selector(selector):
 	new_selector = re.sub(r'[_]', '', selector)
 	return re.sub(r'([a-z]{10}).*$', r'\1', new_selector)
+
+def remove_initial_dashes(string: str):
+	return re.sub(r'^-+', '', string)
