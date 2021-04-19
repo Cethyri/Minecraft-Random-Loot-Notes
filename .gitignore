@@ -4,8 +4,9 @@ __pycache__
 *.zip
 rl_notes*/
 
-1.14.4
+base data
 
 loot_tables
 restrictions
 randomized
+test.py
