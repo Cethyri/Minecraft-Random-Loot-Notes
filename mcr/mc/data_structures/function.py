@@ -1,16 +1,17 @@
 from typing import List
 from enum import Enum
 
-from rln.mc.base import MCDict
-from rln.mc.properties import mc_basic, mc_list
-from rln.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items
+from mcr.mc.base import MCDict
+from mcr.mc.properties import mc_basic, mc_list
+from mcr.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items
 
-from rln.mc.data_structures.condition import Condition
+from mcr.mc.data_structures.condition import Condition
 
 class eFunction(str, Enum):
 	apply_bonus			= 'minecraft:apply_bonus'
 	copy_name			= 'minecraft:copy_name'
 	copy_nbt			= 'minecraft:copy_nbt'
+	copy_state			= 'minecraft:copy_state'
 	enchant_randomly	= 'minecraft:enchant_randomly'
 	enchant_with_levels	= 'minecraft:enchant_with_levels'
 	exploration_map		= 'minecraft:exploration_map'

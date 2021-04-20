@@ -1,7 +1,7 @@
 from typing import Union
 
-from rln.mc.base import MCDict
-from rln.mc.properties import mc_basic
+from mcr.mc.base import MCDict
+from mcr.mc.properties import mc_basic
 
 class IntRange(MCDict):
 	min: int = mc_basic('min', int)

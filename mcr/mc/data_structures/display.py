@@ -1,7 +1,7 @@
 from enum import Enum
 
-from rln.mc.base import MCDict
-from rln.mc.properties import mc_basic
+from mcr.mc.base import MCDict
+from mcr.mc.properties import mc_basic
 
 class Icon(MCDict):
 	item:	str = mc_basic('item', str)

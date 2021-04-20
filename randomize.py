@@ -9,11 +9,11 @@ if len(sys.argv) >= 2:
 	try:
 		seed = int(sys.argv[1])
 	except Exception:
-		print('The seed "{}" is not an integer.'.format(sys.argv[1]))
+		print(f'The seed "{sys.argv[1]}" is not an integer.')
 		exit()
 	random.seed(seed)
-	datapack_name = 'random_loot_{}'.format(seed)
-	datapack_desc = 'Loot Table Randomizer, Seed: {}'.format(seed)
+	datapack_name = f'random_loot_{seed}'
+	datapack_desc = f'Loot Table Randomizer, Seed: {seed}'
 else:
 	print('If you want to use a specific randomizer seed integer, use: "python randomize.py <seed>"')
 	datapack_name = 'random_loot'
@@ -48,11 +48,11 @@ for from_file in file_dict:
 	zip.writestr(os.path.join('data/minecraft/', file_dict[from_file]), contents)
 	
 zip.writestr('pack.mcmeta', json.dumps({'pack':{'pack_format':1, 'description':datapack_desc}}, indent=4))
-zip.writestr('data/minecraft/tags/functions/load.json', json.dumps({'values':['{}:reset'.format(datapack_name)]}))
-zip.writestr('data/{}/functions/reset.mcfunction'.format(datapack_name), 'tellraw @a ["",{"text":"Loot table randomizer by SethBling","color":"green"}]')
+zip.writestr('data/minecraft/tags/functions/load.json', json.dumps({'values':[f'{datapack_name}:reset']}))
+zip.writestr(f'data/{datapack_name}/functions/reset.mcfunction', 'tellraw @a ["",{"text":"Loot table randomizer by SethBling","color":"green"}]')
 	
 zip.close()
 with open(datapack_filename, 'wb') as file:
 	file.write(zipbytes.getvalue())
 	
-print('Created datapack "{}"'.format(datapack_filename))
+print(f'Created datapack "{datapack_filename}"')

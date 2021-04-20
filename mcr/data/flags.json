@@ -27,5 +27,9 @@
 	},
 	"co-op": {
 		"explanation": "Grants everyone notes for co-op play."
+	},
+    "seed": {
+        "usage": "[seed=]<seed>",
+		"explanation": "Sets the seed for randomization."
 	}
 }

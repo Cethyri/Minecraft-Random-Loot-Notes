@@ -1,10 +1,10 @@
 from typing import Union, List
 
-from rln.mc.base import MCDict
-from rln.mc.properties import mc_basic, mc_list
-from rln.mc.data_structures.range import IntRange, init_int_or_range
+from mcr.mc.base import MCDict
+from mcr.mc.properties import mc_basic, mc_list
+from mcr.mc.data_structures.range import IntRange, init_int_or_range
 
-from rln.mc.data_structures.enchantment import Enchantment
+from mcr.mc.data_structures.enchantment import Enchantment
 
 class Item(MCDict):
 	count:			Union[IntRange, int]	= mc_basic('count', init_int_or_range)

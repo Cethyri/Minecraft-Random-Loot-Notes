@@ -1,16 +1,17 @@
 from enum import Enum
 from typing import List, Callable
 
-from rln.mc.base import MCDict
-from rln.mc.properties import mc_basic, mc_list
-from rln.mc.interactable import MCInteractable, MCActionInfo, interact_with_subitems
+from mcr.mc.base import MCDict
+from mcr.mc.properties import mc_basic, mc_list
+from mcr.mc.interactable import MCInteractable, MCActionInfo, interact_with_subitems
 
-from rln.mc.data_structures.pool import Pool
-from rln.mc.data_structures.entry import Entry
+from mcr.mc.data_structures.pool import Pool
+from mcr.mc.data_structures.entry import Entry
 
 
 class eLootTable(str, Enum):
 	advancement_reward	= 'minecraft:advancement_reward'
+	barter				= 'minecraft:barter'
 	block				= 'minecraft:block'
 	chest				= 'minecraft:chest'
 	empty				= 'minecraft:empty'

@@ -1,12 +1,12 @@
 from typing import List, Union, Callable
 from enum import Enum
 
-from rln.mc.base import MCDict
-from rln.mc.properties import mc_basic, mc_list
-from rln.mc.interactable import MCInteractable, MCActionInfo, eItemType, eActionType, interact_with_items, interact_with_subitems
+from mcr.mc.base import MCDict
+from mcr.mc.properties import mc_basic, mc_list
+from mcr.mc.interactable import MCInteractable, MCActionInfo, eItemType, eActionType, interact_with_items, interact_with_subitems
 
-from rln.mc.data_structures.condition import Condition
-from rln.mc.data_structures.function import Function
+from mcr.mc.data_structures.condition import Condition
+from mcr.mc.data_structures.function import Function
 
 class eEntry(str, Enum):
 	item			= 'minecraft:item'
