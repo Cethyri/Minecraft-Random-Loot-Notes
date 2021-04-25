@@ -1,10 +1,10 @@
 from typing import Union
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic
 from mcr.mc.data_structures.range import IntRange, init_int_or_range
 
-class eEnchantment(MCDict):
+class eEnchantment(JsonDict):
 	aqua_affinity			= 'minecraft:aqua_affinity'
 	bane_of_arthropods		= 'minecraft:bane_of_arthropods'
 	binding_curse			= 'minecraft:binding_curse'
@@ -43,6 +43,6 @@ class eEnchantment(MCDict):
 	unbreaking				= 'minecraft:unbreaking'
 	vanishing_curse			= 'minecraft:vanishing_curse'
 
-class Enchantment(MCDict):
-	enchantment:	eEnchantment			= mc_basic('enchantment', eEnchantment)
-	levels:			Union[IntRange, int]	= mc_basic('levels', init_int_or_range)
+class Enchantment(JsonDict):
+	enchantment:	eEnchantment			= json_basic('enchantment', eEnchantment)
+	levels:			Union[IntRange, int]	= json_basic('levels', init_int_or_range)

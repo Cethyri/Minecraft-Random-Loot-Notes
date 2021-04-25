@@ -1,15 +1,15 @@
 from typing import Union
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic
 
-class IntRange(MCDict):
-	min: int = mc_basic('min', int)
-	max: int = mc_basic('max', int)
+class IntRange(JsonDict):
+	min: int = json_basic('min', int)
+	max: int = json_basic('max', int)
 
-class FloatRange(MCDict):
-	min: float = mc_basic('min', float)
-	max: float = mc_basic('max', float)
+class FloatRange(JsonDict):
+	min: float = json_basic('min', float)
+	max: float = json_basic('max', float)
 
 
 def init_int_or_range(json_dict) -> Union[IntRange, int]:

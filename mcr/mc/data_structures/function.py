@@ -1,8 +1,8 @@
 from typing import List
 from enum import Enum
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic, mc_list
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic, json_list
 from mcr.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items
 
 from mcr.mc.data_structures.condition import Condition
@@ -30,9 +30,9 @@ class eFunction(str, Enum):
 	set_stew_effect		= 'minecraft:set_stew_effect'
 
 
-class Function(MCDict, MCInteractable):
-	function:	eFunction		= mc_basic('function', eFunction)
-	conditions:	List[Condition]	= mc_list('conditions', Condition.create)
+class Function(JsonDict, MCInteractable):
+	function:	eFunction		= json_basic('function', eFunction)
+	conditions:	List[Condition]	= json_list('conditions', Condition.create)
 
 	def interact(self, info: MCActionInfo):
 		if info.item_type == eItemType.Condition and 'conditions' in self:

@@ -1,7 +1,7 @@
 from enum import Enum
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic
 
 from mcr.mc.data_structures.position import Position
 
@@ -103,8 +103,8 @@ class eFeature(str, Enum):
 	swamp_hut		= 'minecraft:swamp_hut'
 	village			= 'minecraft:village'
 
-class Location(MCDict):
-	biome:		eBiome		= mc_basic('biome', eBiome)
-	dimension:	eDimension	= mc_basic('dimension', eDimension)
-	feature:	eFeature	= mc_basic('feature', eFeature)
-	position:	Position	= mc_basic('position', Position)
+class Location(JsonDict):
+	biome:		eBiome		= json_basic('biome', eBiome)
+	dimension:	eDimension	= json_basic('dimension', eDimension)
+	feature:	eFeature	= json_basic('feature', eFeature)
+	position:	Position	= json_basic('position', Position)

@@ -1,11 +1,11 @@
 from enum import Enum
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic
 
-class Icon(MCDict):
-	item:	str = mc_basic('item', str)
-	nbt:	str = mc_basic('nbt', str)
+class Icon(JsonDict):
+	item:	str = json_basic('item', str)
+	nbt:	str = json_basic('nbt', str)
 
 	@staticmethod
 	def populate(item: str = ''):
@@ -14,8 +14,8 @@ class Icon(MCDict):
 
 		return icon
 
-class TextComponent(MCDict):
-	text: str = mc_basic('text', str)
+class TextComponent(JsonDict):
+	text: str = json_basic('text', str)
 
 	@staticmethod
 	def populate(text: str = ''):
@@ -29,15 +29,15 @@ class eFrame(str, Enum):
 	goal		= 'goal'
 	challenge	= 'challenge'
 
-class Display(MCDict):
-	icon:				Icon			= mc_basic('icon', Icon)
-	title:				TextComponent	= mc_basic('title', TextComponent)
-	frame:				eFrame			= mc_basic('frame', eFrame)
-	background:			str				= mc_basic('background', str)
-	description:		TextComponent	= mc_basic('description', TextComponent)
-	show_toast:			bool			= mc_basic('show_toast', bool)
-	announce_to_chat:	bool			= mc_basic('announce_to_chat', bool)
-	hidden:				bool			= mc_basic('hidden', bool)
+class Display(JsonDict):
+	icon:				Icon			= json_basic('icon', Icon)
+	title:				TextComponent	= json_basic('title', TextComponent)
+	frame:				eFrame			= json_basic('frame', eFrame)
+	background:			str				= json_basic('background', str)
+	description:		TextComponent	= json_basic('description', TextComponent)
+	show_toast:			bool			= json_basic('show_toast', bool)
+	announce_to_chat:	bool			= json_basic('announce_to_chat', bool)
+	hidden:				bool			= json_basic('hidden', bool)
 
 	@staticmethod
 	def populate(icon: str, title: str, description: str, frame: str = None, background: str = None, show: bool = None, announce: bool = None, hidden: bool = None):

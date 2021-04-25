@@ -1,8 +1,8 @@
 from typing import List, Callable
 from enum import Enum
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic, mc_list
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic, json_list
 from mcr.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items, interact_with_item
 
 from mcr.mc.data_structures.location import Location
@@ -31,8 +31,8 @@ class eEntity(str, Enum):
 	killer			= 'killer'
 	killer_player	= 'killer_player'
 
-class Condition(MCDict, MCInteractable):
-	condition: eCondition = mc_basic('condition', eCondition)
+class Condition(JsonDict, MCInteractable):
+	condition: eCondition = json_basic('condition', eCondition)
 
 	def interact(self, info: MCActionInfo):
 		if info.item_type == eItemType.Condition and 'terms' in self:
@@ -99,37 +99,37 @@ class Condition(MCDict, MCInteractable):
 			return Condition(json_dict)
 
 class Alternative(Condition):
-	terms: List[Condition] = mc_list('terms', Condition.create)
+	terms: List[Condition] = json_list('terms', Condition.create)
 
 class BlockStateProperty(Condition):
-	block:		str		= mc_basic('block', str)
-	properties:	dict	= mc_basic('properties', dict)
+	block:		str		= json_basic('block', str)
+	properties:	dict	= json_basic('properties', dict)
 
 class DamageSourceProperties(Condition):
-	properties: dict = mc_basic('properties', dict)
+	properties: dict = json_basic('properties', dict)
 
 class EntityPresent(Condition):
 	__init__ = Condition.__init__
 
 class EntityProperties(Condition):
-	entity:		eEntity	= mc_basic('entity', eEntity)
-	predicate:	dict	= mc_basic('predicate', dict)
+	entity:		eEntity	= json_basic('entity', eEntity)
+	predicate:	dict	= json_basic('predicate', dict)
 
 class EntityScores(Condition):
-	entity: eEntity	= mc_basic('entity', eEntity)
-	scores: dict	= mc_basic('scores', dict)
+	entity: eEntity	= json_basic('entity', eEntity)
+	scores: dict	= json_basic('scores', dict)
 
 class Inverted(Condition):
-	term: Condition = mc_basic('term', Condition.create)
+	term: Condition = json_basic('term', Condition.create)
 
 class KilledByPlayer(Condition):
-	inverse: bool = mc_basic('inverse', bool)
+	inverse: bool = json_basic('inverse', bool)
 
 class LocationCheck(Condition):
-	predicate: Location = mc_basic('predicate', Location)
+	predicate: Location = json_basic('predicate', Location)
 
 class MatchTool(Condition):
-	predicate:	dict	= mc_basic('predicate', dict)
+	predicate:	dict	= json_basic('predicate', dict)
 
 class RandomChance(Condition):
 	pass

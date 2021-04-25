@@ -1,19 +1,19 @@
 from typing import Union, List
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic, mc_list
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic, json_list
 from mcr.mc.data_structures.range import IntRange, init_int_or_range
 
 from mcr.mc.data_structures.enchantment import Enchantment
 
-class Item(MCDict):
-	count:			Union[IntRange, int]	= mc_basic('count', init_int_or_range)
-	durability:		Union[IntRange, int]	= mc_basic('durability', init_int_or_range)
-	enchantments:	List[Enchantment]		= mc_list('enchantments', Enchantment)
-	item_id:		str						= mc_basic('item', str)
-	nbt:			str						= mc_basic('nbt', str)
-	potion:			str						= mc_basic('potion', str)
-	tag:			str						= mc_basic('tag', str)
+class Item(JsonDict):
+	count:			Union[IntRange, int]	= json_basic('count', init_int_or_range)
+	durability:		Union[IntRange, int]	= json_basic('durability', init_int_or_range)
+	enchantments:	List[Enchantment]		= json_list('enchantments', Enchantment)
+	item_id:		str						= json_basic('item', str)
+	nbt:			str						= json_basic('nbt', str)
+	potion:			str						= json_basic('potion', str)
+	tag:			str						= json_basic('tag', str)
 
 	@staticmethod
 	def populate(count: Union[IntRange, int] = None, durability: Union[IntRange, int] = None, enchantments: List[Enchantment] = None, item_id: str = None, nbt: str = None, potion: str = None, tag: str = None):

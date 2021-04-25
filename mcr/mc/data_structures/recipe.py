@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import List, Callable, Dict, Union
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic, mc_list, mc_dict
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic, json_list, json_dict
 
 
 class eRecipe(str, Enum):
@@ -27,13 +27,13 @@ class eRecipe(str, Enum):
 	crafting_special_tippedarrow		= 'minecraft:crafting_special_tippedarrow'
 	crafting_special_suspiciousstew		= 'minecraft:crafting_special_suspiciousstew'
 
-class Result(MCDict):
-	count:	int	= mc_basic('count', int)
-	item:	str	= mc_basic('item', str)
+class Result(JsonDict):
+	count:	int	= json_basic('count', int)
+	item:	str	= json_basic('item', str)
 
-class Ingredient(MCDict):
-	item:	str = mc_basic('item', str)
-	tag:	str = mc_basic('tag', str)
+class Ingredient(JsonDict):
+	item:	str = json_basic('item', str)
+	tag:	str = json_basic('tag', str)
 
 def init_ingredient_or_list(json_dict: Union[dict, List[dict]]):
 	if isinstance(json_dict, dict):
@@ -45,11 +45,11 @@ def init_ingredient_or_list(json_dict: Union[dict, List[dict]]):
 		return ingredient_list
 
 
-class Recipe(MCDict):
-	typ: 	eRecipe	= mc_basic('type', eRecipe)
-	group: 	str		= mc_basic('group', str)
+class Recipe(JsonDict):
+	typ: 	eRecipe	= json_basic('type', eRecipe)
+	group: 	str		= json_basic('group', str)
 
 class CraftingShaped(Recipe):
-	pattern:	List[str]										= mc_list('pattern', str)
-	key:		Dict[str, Union[Ingredient, List[Ingredient]]]	= mc_dict('key', init_ingredient_or_list)
-	result:		Result											= mc_basic('result', Result)
+	pattern:	List[str]										= json_list('pattern', str)
+	key:		Dict[str, Union[Ingredient, List[Ingredient]]]	= json_dict('key', init_ingredient_or_list)
+	result:		Result											= json_basic('result', Result)

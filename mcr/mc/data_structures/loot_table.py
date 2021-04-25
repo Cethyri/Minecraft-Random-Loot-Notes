@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import List, Callable
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic, mc_list
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic, json_list
 from mcr.mc.interactable import MCInteractable, MCActionInfo, interact_with_subitems
 
 from mcr.mc.data_structures.pool import Pool
@@ -21,9 +21,9 @@ class eLootTable(str, Enum):
 	gift				= 'minecraft:gift'
 
 
-class LootTable(MCDict, MCInteractable):
-	typ:	eLootTable = mc_basic('type', eLootTable)
-	pools:	List[Pool] = mc_list('pools', Pool)
+class LootTable(JsonDict, MCInteractable):
+	typ:	eLootTable = json_basic('type', eLootTable)
+	pools:	List[Pool] = json_list('pools', Pool)
 
 	def interact(self, info: MCActionInfo):
 		if 'pools' in self:

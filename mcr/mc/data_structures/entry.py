@@ -1,8 +1,8 @@
 from typing import List, Union, Callable
 from enum import Enum
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic, mc_list
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic, json_list
 from mcr.mc.interactable import MCInteractable, MCActionInfo, eItemType, eActionType, interact_with_items, interact_with_subitems
 
 from mcr.mc.data_structures.condition import Condition
@@ -23,11 +23,11 @@ class eDynamic(str, Enum):
 	dyn_self = 'minecraft:self'
 
 
-class Entry(MCDict, MCInteractable):
-	conditions:	List[Condition]	= mc_list('conditions', Condition.create)
-	typ:		eEntry			= mc_basic('type', eEntry)
-	weight:		int				= mc_basic('weight', int)
-	quality:	int				= mc_basic('quality', int)
+class Entry(JsonDict, MCInteractable):
+	conditions:	List[Condition]	= json_list('conditions', Condition.create)
+	typ:		eEntry			= json_basic('type', eEntry)
+	weight:		int				= json_basic('weight', int)
+	quality:	int				= json_basic('quality', int)
 
 	def interact(self, info: MCActionInfo):
 		if info.item_type == eItemType.Entry and 'children' in self:
@@ -73,27 +73,27 @@ class Entry(MCDict, MCInteractable):
 
 
 class ItemEntry(Entry):
-	name:		str				= mc_basic('name', str)
-	functions:	List[Function]	= mc_list('functions', Function.create)
+	name:		str				= json_basic('name', str)
+	functions:	List[Function]	= json_list('functions', Function.create)
 
 class TagEntry(Entry):
-	name:	str		= mc_basic('name', str)
-	expand:	bool	= mc_basic('expand', bool)
+	name:	str		= json_basic('name', str)
+	expand:	bool	= json_basic('expand', bool)
 
 class LootTableEntry(Entry):
-	name: str = mc_basic('name', str)
+	name: str = json_basic('name', str)
 
 class GroupEntry(Entry):
-	children: List[Entry] = mc_list('children', Entry.create)
+	children: List[Entry] = json_list('children', Entry.create)
 
 class AlternativesEntry(Entry):
-	children: List[Entry] = mc_list('children', Entry.create)
+	children: List[Entry] = json_list('children', Entry.create)
 
 class SequenceEntry(Entry):
-	children: List[Entry] = mc_list('children', Entry.create)
+	children: List[Entry] = json_list('children', Entry.create)
 
 class DynamicEntry(Entry):
-	name: eDynamic = mc_basic('name', eDynamic)
+	name: eDynamic = json_basic('name', eDynamic)
 
 
 a = property()

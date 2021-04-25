@@ -4,8 +4,8 @@ import random
 from typing import List, Dict, Union, Iterable
 from enum import Enum
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic
 from mcr.mc.interactable import MCActionInfo, eItemType, eActionType
 
 from mcr.mc.data_structures.loot_table import LootTable, eLootTable
@@ -38,11 +38,11 @@ class eAdvItemType(str, Enum):
 
 
 class AdvItem(dict):
-    selector:		str				= mc_basic('selector', str)
-    item_selector:	str				= mc_basic('item_selector', str)
-    adv_item_type:	eAdvItemType	= mc_basic('adv_item_type', eAdvItemType)
-    title:			str				= mc_basic('title', str)
-    description:	str				= mc_basic('description', str)
+    selector:		str				= json_basic('selector', str)
+    item_selector:	str				= json_basic('item_selector', str)
+    adv_item_type:	eAdvItemType	= json_basic('adv_item_type', eAdvItemType)
+    title:			str				= json_basic('title', str)
+    description:	str				= json_basic('description', str)
 
     @staticmethod
     def populate(selector: str, adv_item_type: eAdvItemType, item_selector: str = None, title: str = None, description: str = None):

@@ -1,8 +1,8 @@
 from typing import Union, List
 from enum import Enum
 
-from mcr.mc.base import MCDict
-from mcr.mc.properties import mc_basic, mc_list
+from mcr.mc.base import JsonDict
+from mcr.mc.properties import json_basic, json_list
 from mcr.mc.data_structures.range import IntRange, init_int_or_range
 
 from mcr.mc.data_structures.location import eDimension, Location
@@ -46,7 +46,7 @@ class eTrigger(str, Enum):
 	villager_trade			= 'minecraft:villager_trade'
 	voluntary_exile			= 'minecraft:voluntary_exile'
 
-class TriggerConditions(MCDict):
+class TriggerConditions(JsonDict):
 	pass
 
 def switch(trigger_type: eTrigger, conditions: dict) -> TriggerConditions:
@@ -160,55 +160,55 @@ def switch(trigger_type: eTrigger, conditions: dict) -> TriggerConditions:
 
 
 class BredAnimals(TriggerConditions):
-	child:		Entity = mc_basic('child', Entity)
-	parent:		Entity = mc_basic('parent', Entity)
-	partner:	Entity = mc_basic('partner', Entity)
+	child:		Entity = json_basic('child', Entity)
+	parent:		Entity = json_basic('parent', Entity)
+	partner:	Entity = json_basic('partner', Entity)
 
 class BrewedPotion(TriggerConditions):
-	potion: str = mc_basic('potion', str)
+	potion: str = json_basic('potion', str)
 
 class ChangedDimension(TriggerConditions):
-	frm:	eDimension = mc_basic('from', eDimension)
-	to:		eDimension = mc_basic('to', eDimension)
+	frm:	eDimension = json_basic('from', eDimension)
+	to:		eDimension = json_basic('to', eDimension)
 
 class ChanneledLightning(TriggerConditions):
-	victims: Entity = mc_basic('victims', Entity)
+	victims: Entity = json_basic('victims', Entity)
 
 class ConstructBeacon(TriggerConditions):
-	level: Union[IntRange, int] = mc_basic('level', init_int_or_range)
+	level: Union[IntRange, int] = json_basic('level', init_int_or_range)
 
 class ConsumeItem(TriggerConditions):
-	item: Item = mc_basic('item', Item)
+	item: Item = json_basic('item', Item)
 
 class CuredZombieVillager(TriggerConditions):
-	villager:	Entity = mc_basic('villager', Entity)
-	zombie:		Entity = mc_basic('zombie', Entity)
+	villager:	Entity = json_basic('villager', Entity)
+	zombie:		Entity = json_basic('zombie', Entity)
 
 class EffectsChanged(TriggerConditions):
-	effects: dict = mc_basic('effect', dict)
+	effects: dict = json_basic('effect', dict)
 
 class EnchantedItem(TriggerConditions):
-	item:	Item					= mc_basic('item', Item)
-	levels:	Union[IntRange, int]	= mc_basic('levels', init_int_or_range)
+	item:	Item					= json_basic('item', Item)
+	levels:	Union[IntRange, int]	= json_basic('levels', init_int_or_range)
 
 class EnterBlock(TriggerConditions):
-	block: str	= mc_basic('block', str)
-	state: dict	= mc_basic('state', dict)
+	block: str	= json_basic('block', str)
+	state: dict	= json_basic('state', dict)
 
 class EntityHurtPlayer(TriggerConditions):
-	damage: dict = mc_basic('damage', dict)
+	damage: dict = json_basic('damage', dict)
 	
 class EntityKilledPlayer(TriggerConditions):
-	entity:			Entity	= mc_basic('entity', Entity)
-	killing_blow:	dict	= mc_basic('killing_blow', dict)
+	entity:			Entity	= json_basic('entity', Entity)
+	killing_blow:	dict	= json_basic('killing_blow', dict)
 
 class FilledBucket(TriggerConditions):
-	item: Item = mc_basic('item', Item)
+	item: Item = json_basic('item', Item)
 
 class FishingRodHooked(TriggerConditions):
-	entity:	Entity	= mc_basic('entity', Entity)
-	item:	Item	= mc_basic('item', Item)
-	rod:	Item	= mc_basic('item', Item)
+	entity:	Entity	= json_basic('entity', Entity)
+	item:	Item	= json_basic('item', Item)
+	rod:	Item	= json_basic('item', Item)
 
 
 class HeroOfTheVillage(TriggerConditions):
@@ -218,8 +218,8 @@ class Impossible(TriggerConditions):
 	pass
 
 class InventoryChanged(TriggerConditions):
-	req_items:	List[Item]	= mc_list('items', Item)
-	slots:		dict		= mc_basic('slots', dict)
+	req_items:	List[Item]	= json_list('items', Item)
+	slots:		dict		= json_basic('slots', dict)
 
 # class ItemDurabilityChanged(TriggerConditions):
 # class KilledByCrossbow(TriggerConditions):
@@ -230,8 +230,8 @@ class InventoryChanged(TriggerConditions):
 # class PlayerHurtEntity(TriggerConditions):
 
 class PlayerKilledEntity(TriggerConditions):
-	entity:			Entity	= mc_basic('entity', Entity)
-	killing_blow:	dict	= mc_basic('killing_blow', dict)
+	entity:			Entity	= json_basic('entity', Entity)
+	killing_blow:	dict	= json_basic('killing_blow', dict)
 
 # class RecipeUnlocked(TriggerConditions):
 # class ShotCrossbow(TriggerConditions):
@@ -244,9 +244,9 @@ class PlayerKilledEntity(TriggerConditions):
 # class VillagerTrade(TriggerConditions):
 # class VoluntaryExile(TriggerConditions):
 
-class Criteria(MCDict):
-	trigger_type:	eTrigger			= mc_basic('trigger', eTrigger)
-	conditions:		TriggerConditions	= mc_basic('conditions', TriggerConditions)
+class Criteria(JsonDict):
+	trigger_type:	eTrigger			= json_basic('trigger', eTrigger)
+	conditions:		TriggerConditions	= json_basic('conditions', TriggerConditions)
 
 	@staticmethod
 	def create(json_dict: dict):

@@ -20,23 +20,23 @@ def _dynamic_deleter(key: str):
 	
 	return deleter
 
-class _MCProperty(property):
+class _JsonProperty(property):
 	def __init__(self, key: str, init: Callable, getter: Callable, setter: Callable, deleter: Callable):
 		super().__init__(getter, setter, deleter)
 		self.key = key
 		self.init = init
 
-def mc_basic(key: str, init: Callable) -> property:
-	return _MCProperty(key, init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
+def json_basic(key: str, init: Callable) -> property:
+	return _JsonProperty(key, init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
 
 
-def mc_list(key: str, init: Callable) -> property:
+def json_list(key: str, init: Callable) -> property:
 	list_init = lambda list_val: [init(v) for v in list_val]
 
-	return _MCProperty(key, list_init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
+	return _JsonProperty(key, list_init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
 
 
-def mc_dict(key: str, init: Callable) -> property:
+def json_dict(key: str, init: Callable) -> property:
 	dict_init = lambda dict_val: { k: init(v) for k, v in dict_val.items() }
 
-	return _MCProperty(key, dict_init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
+	return _JsonProperty(key, dict_init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
