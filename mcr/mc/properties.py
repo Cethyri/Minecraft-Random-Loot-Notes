@@ -13,7 +13,6 @@ def _dynamic_setter(key: str):
 	
 	return setter
 
-
 def _dynamic_deleter(key: str):
 	def deleter(self):
 		del self[key]
@@ -29,12 +28,10 @@ class _JsonProperty(property):
 def json_basic(key: str, init: Callable) -> property:
 	return _JsonProperty(key, init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
 
-
 def json_list(key: str, init: Callable) -> property:
 	list_init = lambda list_val: [init(v) for v in list_val]
 
 	return _JsonProperty(key, list_init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
-
 
 def json_dict(key: str, init: Callable) -> property:
 	dict_init = lambda dict_val: { k: init(v) for k, v in dict_val.items() }
