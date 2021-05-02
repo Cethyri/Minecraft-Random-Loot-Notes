@@ -1,3 +1,8 @@
+from collections import defaultdict
+from mcr.mc.commands.argument_types import BlockPos, Vec3, relative_symbol
+from mcr.mc.commands.mcfunction import MCFunction
+from mcr.mc.commands.function import Function
+from mcr.mc.commands.execute import Execute, eComparison
 import os
 import random
 import io
@@ -7,7 +12,7 @@ import sys
 import math
 
 from enum import Enum
-from typing import Dict, List, Callable
+from typing import DefaultDict, Dict, List, Callable
 
 from mcr.loot_table_map import LootTableMap, populate_advancement_chain, AdvItem, eAdvItemType, validate_conditions
 
@@ -36,6 +41,7 @@ if flags is None:
     exit()
 
 seed_given = 'seed' in flags
+seed = flags['seed']
 
 if not seed_given:
     seed = random.randint(-sys.maxsize, sys.maxsize)
@@ -154,46 +160,47 @@ tabbed_advs_and_recipes = {}
 recipes: Dict[str, CraftingShaped] = {}
 
 objective_num = 0
-functions: Dict[str, List[str]] = {}
-functions['load'] = [
-    f'execute unless score debug mcr_loaded = 1 run function {datapack_name}:add',
-    'scoreboard objectives add mcr_loaded dummy',
-    'scoreboard players set debug mcr_loaded 1',
-    'scoreboard objectives add show_debug trigger ["",{"text":"Debug"}]',
-    'tellraw @a ["",{"text":"Loot table randomizer with notes, by Cethyrion, adapted from SethBling\'s Loot table randomizer","color":"green"}]',
-]
-functions['add'] = [
-    'scoreboard objectives add mcr_setup dummy',
-    'scoreboard objectives add mcr_complete dummy',
-    'scoreboard objectives add mcr_incomplete dummy',
-    'scoreboard objectives add mcr_ref_complete dummy',
-]
-functions['tick'] = [
-    f'execute as @a unless score @s mcr_setup = 1 run function {datapack_name}:setup'
-]
-functions['setup'] = [
-    'scoreboard players set @s mcr_setup 1',
-    'tellraw @s ["",{"selector":"say mcr_setup @s\'s MCRandomizer","color":"green"}]',
-]
-functions['debug'] = [
-    f'function {datapack_name}:reset',
-]
-functions['reset'] = [
-    'scoreboard players set debug mcr_loaded 0'
-    f'function {datapack_name}:remove',
-    f'function {datapack_name}:load',
-]
-functions['remove'] = [
-    'scoreboard objectives remove mcr_setup',
-    'scoreboard objectives remove mcr_complete',
-    'scoreboard objectives remove mcr_incomplete',
-    'scoreboard objectives remove mcr_ref_complete',
-]
-functions['uninstall'] = [
-    f'function {datapack_name}:remove',
-    'scoreboard objectives remove mcr_loaded',
-    'scoreboard objectives remove show_debug',
-]
+functions: Dict[str, MCFunction] = defaultdict(MCFunction)
+
+(functions['load']
+    .execute().unless_score_matches('debug', 'mcr_loaded', 1).run(Function(f'{datapack_name}:add'))
+    .custom('scoreboard objectives add mcr_loaded dummy')
+    .custom('scoreboard players set debug mcr_loaded 1')
+    .custom('scoreboard objectives add show_debug trigger ["",{"text":"Debug"}]')
+    .custom('tellraw @a ["",{"text":"Loot table randomizer with notes, by Cethyrion, adapted from SethBling\'s Loot table randomizer","color":"green"}]')
+)
+(functions['add']
+    .custom('scoreboard objectives add mcr_setup dummy')
+    .custom('scoreboard objectives add mcr_complete dummy')
+    .custom('scoreboard objectives add mcr_incomplete dummy')
+    .custom('scoreboard objectives add mcr_ref_complete dummy')
+)
+(functions['tick']
+    .execute().as_('@a').unless_score_matches('@s', 'mcr_setup', 1).run(Function(f'{datapack_name}:setup'))
+)
+(functions['setup']
+    .custom('scoreboard players set @s mcr_setup 1')
+    .custom('tellraw @s ["",{"selector":"say mcr_setup @s\'s MCRandomizer","color":"green"}]')
+)
+(functions['debug']
+    .function(f'{datapack_name}:reset')
+)
+(functions['reset']
+    .custom('scoreboard players set debug mcr_loaded 0')
+    .function(f'{datapack_name}:remove')
+    .function(f'{datapack_name}:load')
+)
+(functions['remove']
+    .custom('scoreboard objectives remove mcr_setup')
+    .custom('scoreboard objectives remove mcr_complete')
+    .custom('scoreboard objectives remove mcr_incomplete')
+    .custom('scoreboard objectives remove mcr_ref_complete')
+)
+(functions['uninstall']
+    .function(f'{datapack_name}:remove')
+    .custom('scoreboard objectives remove mcr_loaded')
+    .custom('scoreboard objectives remove show_debug')
+)
 
 def get_minecraft_selector(selector: str):
     return f'minecraft:{selector}'
@@ -309,13 +316,15 @@ def generate_children_functions(pathed_selector: str, start_link: AdvItem, path:
             namespaced_selector = get_namespaced_selector(child_pathed_selector)
             if adv_child.adv_item_type is not eAdvItemType.reference and adv_child.selector == adv_child.item_selector:
                 for execute_conditions in execute_conditions_list:
-                    functions[pathed_selector].append(f'execute {execute_conditions(adv_child)} run advancement grant @s only {namespaced_selector}')
-                functions[pathed_selector].append(f'recipe give @s[advancements = {{ {namespaced_selector} = true }}] {namespaced_selector}')
-                functions[pathed_selector].append(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = true }}] mcr_complete 1')
-                functions[pathed_selector].append(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = false }}] mcr_incomplete 1')
+                    functions[pathed_selector].execute(f'execute {execute_conditions(adv_child)}').run(f'advancement grant @s only {namespaced_selector}')
+                (functions[pathed_selector]
+                    .custom(f'recipe give @s[advancements = {{ {namespaced_selector} = true }}] {namespaced_selector}')
+                    .custom(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = true }}] mcr_complete 1')
+                    .custom(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = false }}] mcr_incomplete 1')
+                )
                 
                 if is_reference:
-                    functions[pathed_selector].append(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = true }}] mcr_ref_complete 1')
+                    functions[pathed_selector].custom(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = true }}] mcr_ref_complete 1')
 
             elif adv_child.adv_item_type is eAdvItemType.reference and adv_child.selector not in references:
                 search_queue.append(adv_child)
@@ -323,8 +332,10 @@ def generate_children_functions(pathed_selector: str, start_link: AdvItem, path:
 
         if is_reference:
             root_namespaced_selector = get_namespaced_selector(get_pathed_selector(cur_link.selector, path, base, 0))
-            functions[pathed_selector].append(f'advancement grant @s[scores = {{ mcr_ref_complete = 1.. }}] only {reference_namespaced_selectors[cur_link.selector]}')
-            functions[pathed_selector].append(f'advancement grant @s[scores = {{ mcr_ref_complete = 1.. }}] only {root_namespaced_selector}')
+            (functions[pathed_selector]
+                .custom(f'advancement grant @s[scores = {{ mcr_ref_complete = 1.. }}] only {reference_namespaced_selectors[cur_link.selector]}')
+                .custom(f'advancement grant @s[scores = {{ mcr_ref_complete = 1.. }}] only {root_namespaced_selector}')
+            )
         else:
             is_reference = True
 
@@ -357,9 +368,9 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
         return
     
     elif adv_link.selector == 'armor_stand':
-        functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 0.. }}] at @s at @e[distance = ..8, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item: {{ id:"minecraft:armor_stand" }} }}] run function {namespaced_selector}')
+        functions['tick'].execute().as_(f'@a[scores = {{ {objective_name} = 0.. }}]').at('@s').at('@e[distance = ..8, type = minecraft:item, limit = 1, nbt = { Age: 0s, Item: { id:"minecraft:armor_stand" } }]').run(Function(namespaced_selector))
 
-        execute_conditions_list = [
+        execute_conditions_list = [ # make into Execute('') call
             lambda adv_child: f'if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
         ]
 
@@ -369,8 +380,12 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
         for i in range(10):
             score = i + 1
             distance = score / 2
-            functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 0 }}] at @s anchored eyes if block ^ ^ ^{distance} minecraft:{adv_link.selector} run scoreboard players set @s {objective_name} {score}')
-            functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = {score} }}] at @s anchored eyes unless block ^ ^ ^{distance} minecraft:{adv_link.selector} positioned ^ ^ ^{distance} run function {namespaced_selector}')
+            pos = BlockPos(z=f'{distance}', rel='^')
+            vecPos = Vec3(z=f'{distance}', rel='^')
+            (functions['tick']
+                .execute().as_(f'@a[scores = {{ {objective_name} = 0 }}]').at('@s').anchored('eyes').if_block(pos, f'minecraft:{adv_link.selector}').run(f'scoreboard players set @s {objective_name} {score}')
+                .execute().as_(f'@a[scores = {{ {objective_name} = {score} }}]').at('@s').anchored('eyes').unless_block(pos, f'minecraft:{adv_link.selector}').positioned(vecPos).run(Function(namespaced_selector))
+            )
             
         execute_conditions_list = [
             lambda adv_child: f'unless block ~ ~ ~ minecraft:{adv_link.selector} if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'

@@ -8,10 +8,10 @@ class relative_symbol(str, Enum):
 	caret = '^'
 
 class BlockPos():
-	def __init__(self, x: Union[int, str], y: Union[int, str], z: Union[int, str], rel: relative_symbol = ''):
-		self.x = x
-		self.y = y
-		self.z = z
+	def __init__(self, x: Union[int, str] = 0, y: Union[int, str] = 0, z: Union[int, str] = 0, rel: Union[relative_symbol, str] = ''):
+		self.x = x or ''
+		self.y = y or ''
+		self.z = z or ''
 		self.rel = rel
 
 	def __str__(self):
@@ -28,13 +28,8 @@ class selector(str, Enum):
 	all_players		= '@a'
 	all_entities	= '@e'
 	current			= '@s'
-	p				= '@p'
-	r				= '@r'
-	a				= '@a'
-	e				= '@e'
-	s				= '@s'
 
-class Entity():
+class Entity(str):
 	def __init__(self, selector: Union[str, selector], variables: Union[str, dict] = None):
 		self.selector = selector
 		self.variables = variables
@@ -48,6 +43,15 @@ class entity_anchor(str, Enum):
 	feet	= 'feet'
 	eyes	= 'eyes'
 
+class IntRange(str):
+	pass
+
+class NBTPath(str):
+	pass
+
+class NamespacedId(str):
+	pass
+
 class Rotation():
 	def __init__(self, x: Union[float, str], y: Union[float, str], rel: relative_symbol = ''):
 		self.x = x
@@ -56,6 +60,9 @@ class Rotation():
 
 	def __str__(self):
 		return f'{self.rel}{self.x} {self.rel}{self.y}'
+
+class Objective(str):
+	pass
 
 class swizzle(str, Enum):
 	x	= 'x'
@@ -66,8 +73,9 @@ class swizzle(str, Enum):
 	yz	= 'yz'
 	xyz	= 'xyz'
 
+# make into a fancy kwargs ultimate no bounds vec and generic to the value type
 class Vec3():
-	def __init__(self, x: Union[float, str], y: Union[float, str], z: Union[float, str], rel: relative_symbol = ''):
+	def __init__(self, x: Union[float, str], y: Union[float, str], z: Union[float, str], rel: Union[relative_symbol, str] = ''):
 		self.x = x
 		self.y = y
 		self.z = z
