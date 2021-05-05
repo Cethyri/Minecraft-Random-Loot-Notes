@@ -1,37 +1,38 @@
-from collections import defaultdict
-from mcr.mc.commands.argument_types import BlockPos, Vec3, relative_symbol
-from mcr.mc.commands.mcfunction import MCFunction
-from mcr.mc.commands.function import Function
-from mcr.mc.commands.execute import Execute, eComparison
+import io
+import json
+import math
 import os
 import random
-import io
-import zipfile
-import json
 import sys
-import math
-
+import zipfile
+from collections import defaultdict
 from enum import Enum
-from typing import DefaultDict, Dict, List, Callable
-
-from mcr.loot_table_map import LootTableMap, populate_advancement_chain, AdvItem, eAdvItemType, validate_conditions
-
-from mcr.helpers.regex import fix_a_an, get_upper_selector, shorten_selector
+from typing import Callable, DefaultDict, Dict, List
 
 from mcr.flags import handleflags
-
-from mcr.mc.interactable import MCActionInfo, eItemType, eActionType
-
-from mcr.mc.data_structures.loot_table import LootTable, eLootTable
+from mcr.helpers.regex import fix_a_an, get_upper_selector, shorten_selector
+from mcr.loot_table_map import (AdvItem, LootTableMap, eAdvItemType,
+                                populate_advancement_chain,
+                                validate_conditions)
+import mcr.mc.commands.argument_types as mcArgs
+from mcr.mc.commands.execute import Execute, eComparison
+from mcr.mc.commands.function import Function
+from mcr.mc.commands.mcfunction import MCFunction
 from mcr.mc.data_structures.advancement import Advancement, Rewards
-from mcr.mc.data_structures.condition import Condition, eCondition, eRestriction, get_restriction_level
+from mcr.mc.data_structures.condition import (Condition, eCondition,
+                                              eRestriction,
+                                              get_restriction_level)
+from mcr.mc.data_structures.criteria import (Criteria, EntityKilledPlayer,
+                                             FishingRodHooked, Impossible,
+                                             InventoryChanged,
+                                             PlayerKilledEntity, eTrigger)
 from mcr.mc.data_structures.display import Display, Icon, TextComponent
-from mcr.mc.data_structures.criteria import Criteria, eTrigger, InventoryChanged, Impossible, PlayerKilledEntity, EntityKilledPlayer, FishingRodHooked
-from mcr.mc.data_structures.item import Item
 from mcr.mc.data_structures.entity import Entity
-from mcr.mc.data_structures.recipe import CraftingShaped, eRecipe, Ingredient, Result
-
-
+from mcr.mc.data_structures.item import Item
+from mcr.mc.data_structures.loot_table import LootTable, eLootTable
+from mcr.mc.data_structures.recipe import (CraftingShaped, Ingredient, Result,
+                                           eRecipe)
+from mcr.mc.interactable import MCActionInfo, eActionType, eItemType
 
 print('Checking flags and setting up...')
 
@@ -46,7 +47,7 @@ seed = flags['seed']
 if not seed_given:
 	seed = random.randint(-sys.maxsize, sys.maxsize)
 	if not flags['save-seed']:
-		print('If you want to use a specific randomizer seed, include a seed in the list of arguments. ex: "python mc_randomize.py 12345".')
+		print('If you want to use a specific randomizer seed, include a seed in the list of arguments. ex: "python3 mc_randomize.py 12345".')
 
 if (seed_given and not flags['hide-seed']) or (not seed_given and flags['save-seed']):
 	datapack_name = f'mcr_{seed}'
@@ -57,7 +58,7 @@ random.seed(seed)
 datapack_desc = f'Minecraft Randomizer, Seed: "{seed}"'
 
 if any(flags) or 'seed' in flags:
-	print('Customization is available through flags. If you would like to see a list of flags use: "python mc_randomizer.py "')
+	print('Customization is available through flags. If you would like to see a list of flags use: "python3 mc_randomizer.py -help"')
 	
 datapack_filename = datapack_name + '.zip'
 
@@ -364,14 +365,16 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	grant_target_selector = '[scores = { mcr_incomplete = 0 }]'
 	child_index = link_index + 1
 
+	get_item_entity = lambda adv_child, distance = 2: mcArgs.Entity('@e', f'distance = ..{distance}, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}')
+
 	if adv_link.selector == 'sheep' or 'fishing' in loot_table_map.path:
 		return
 	
 	elif adv_link.selector == 'armor_stand':
-		functions['tick'].execute().as_(f'@a[scores = {{ {objective_name} = 0.. }}]').at('@s').at('@e[distance = ..8, type = minecraft:item, limit = 1, nbt = { Age: 0s, Item: { id:"minecraft:armor_stand" } }]').run(Function(namespaced_selector))
+		functions['tick'].execute().as_('@a').if_score_matches('@s', objective_name, '..0').at('@s').at(get_item_entity('armor_stand', 8)).run(Function(namespaced_selector))
 
-		execute_conditions_list = [ # make into Execute('') call
-			lambda adv_child: f'if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
+		execute_conditions_list = [
+			lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child)) 
 		]
 
 		grant_target_selector = ''
@@ -380,15 +383,15 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 		for i in range(10):
 			score = i + 1
 			distance = score / 2
-			pos = BlockPos(z=f'{distance}', rel='^')
-			vecPos = Vec3(z=f'{distance}', rel='^')
+			pos = mcArgs.BlockPos(z=f'{distance}', rel='^')
+			vecPos = mcArgs.Vec3(z=f'{distance}', rel='^')
 			(functions['tick']
-				.execute().as_(f'@a[scores = {{ {objective_name} = 0 }}]').at('@s').anchored('eyes').if_block(pos, f'minecraft:{adv_link.selector}').run(f'scoreboard players set @s {objective_name} {score}')
-				.execute().as_(f'@a[scores = {{ {objective_name} = {score} }}]').at('@s').anchored('eyes').unless_block(pos, f'minecraft:{adv_link.selector}').positioned(vecPos).run(Function(namespaced_selector))
+				.execute().as_('@a').if_score_matches('@s', objective_name, '0').at('@s').anchored('eyes').if_block(pos, f'minecraft:{adv_link.selector}').run(f'scoreboard players set @s {objective_name} {score}')
+				.execute().as_('@a').if_score_matches('@s', objective_name, score).at('@s').anchored('eyes').unless_block(pos, f'minecraft:{adv_link.selector}').positioned(vecPos).run(Function(namespaced_selector))
 			)
 			
 		execute_conditions_list = [
-			lambda adv_child: f'unless block ~ ~ ~ minecraft:{adv_link.selector} if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
+			lambda adv_child: Execute.conditions().unless_block(mcArgs.BlockPos(rel='~'), f'minecraft:{adv_link.selector}').if_entity(get_item_entity(adv_child))
 		]
 		
 		reset_objective = True
@@ -397,10 +400,10 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	elif loot_table_map.original.typ is eLootTable.block:
 		objective_criteria = f'minecraft.mined:minecraft.{adv_link.selector}'
 
-		functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 1.. }}] at @s run function {namespaced_selector}')
+		functions['tick'].execute().as_('@a').if_score_matches('@s', objective_name, '1..').at('@s').run(Function(namespaced_selector))
 
 		execute_conditions_list = [
-			lambda adv_child: f'if entity @e[distance = ..8, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
+			lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child, 8))
 		]
 
 		reset_objective = True
@@ -412,11 +415,16 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 		for i in range(10):
 			score = i + 1
 			distance = score / 2
-			functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 0 }}] at @s anchored eyes if block ^ ^ ^{distance} minecraft:chest{{ LootTable: "minecraft:{loot_table_pathed_selector}" }} run scoreboard players set @s {objective_name} {score}')
-			functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = {score} }}] at @s anchored eyes unless block ^ ^ ^{distance} minecraft:chest{{ LootTable: "minecraft:{loot_table_pathed_selector}" }} positioned ^ ^ ^{distance} run function {namespaced_selector}')
-			
+			pos = mcArgs.BlockPos(rel='^', z=distance)
+			vecPos = mcArgs.Vec3(rel='^', z=distance)
+			block = f'minecraft:chest{{ LootTable: "minecraft:{loot_table_pathed_selector}" }}'
+			(functions['tick']
+				.execute().as_('@a').if_score_matches('@s', objective_name, 0).at('@s').anchored('eye').if_block(pos, block).run(f'scoreboard players set @s {objective_name} {score}')
+				.execute().as_('@a').if_score_matches('@s', objective_name, score).at('@s').anchored('eye').unless_block(pos, block).positioned(vecPos).run(Function(namespaced_selector))
+			)
+
 		execute_conditions_list = [
-			lambda adv_child: f'if block ~ ~ ~ minecraft:chest{{ Items: [{{ id: "minecraft:{adv_child.item_selector}" }}] }}'
+			lambda adv_child: Execute.conditions().if_block(mcArgs.BlockPos(rel='~'), f'minecraft:chest{{ Items: [{{ id: "minecraft:{adv_child.item_selector}" }}] }}')
 		]
 		
 		reset_objective = True
@@ -424,22 +432,25 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	elif loot_table_map.original.typ is eLootTable.gift and 'hero_of_the_village' in loot_table_map.path:
 		villager_type = adv_link.selector.replace('_gift', '')
 
-		functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 0.. }}, nbt = {{ ActiveEffects: [{{ Id: 32b }}] }}] at @s at @e[distance = ..8, type = minecraft:villager, nbt = {{ VillagerData: {{ profession:"minecraft:{villager_type}" }} }}] run function {namespaced_selector}')
-		
+		functions['tick'].execute().as_('@a[nbt = { ActiveEffects: [{ Id: 32b }] }]').if_score_matches('@s', objective_name, '0..').at('@s').at(f'@e[distance = ..8, type = minecraft:villager, nbt = {{ VillagerData: {{ profession:"minecraft:{villager_type}" }} }}]').run(Function(namespaced_selector))
+
 		execute_conditions_list = [
-			lambda adv_child: f'if entity @e[distance = ..2, type = minecraft:item, limit = 1, nbt = {{ Age:0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
+			lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child))
 		]
 
 	elif adv_link.selector == 'cat_morning_gift':
 		objective_name = 'sleeping'
 		objective_num -= 1
 
-		functions['tick'].append('execute as @a[scores = { sleeping = 0.. }] store result score @s sleeping run data get entity @s SleepTimer')
-		functions['tick'].append(f'execute as @a[scores = {{ sleeping = 101 }}] at @s at @e[distance = ..16, type = minecraft:cat] run function {namespaced_selector}')
+		(functions['tick']
+			.execute().as_('@a').if_score_matches('@s', 'sleeping', '0..').store_result_score('@s', 'sleeping').run('data get entity @s SleepTimer')
+			.execute().as_('@a').if_score_matches('@s', 'sleeping', 101).at('@s').at('@e[distance = ..16, type = minecraft:cat]').run(Function(namespaced_selector))
+		)
 
 		execute_conditions_list = [
-			lambda adv_child: f'if entity @e[distance = ..4, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]',
-			lambda adv_child: f'as @s[nbt = {{ Inventory: [{{ id: "minecraft:{adv_child.item_selector}" }}] }}]'
+			lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child, 4)),
+			lambda adv_child: Execute.conditions().as_(f'@s[nbt = {{ Inventory: [{{ id: "minecraft:{adv_child.item_selector}" }}] }}]')
+			# lambda adv_child: f'as @s[nbt = {{ Inventory: [{{ id: "minecraft:{adv_child.item_selector}" }}] }}]'
 		]
 
 	elif loot_table_map.original.typ is eLootTable.entity:
@@ -467,10 +478,10 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 		advancements[helper_selector].rewards.function = namespaced_helper
 		functions[helper_selector] = [f'scoreboard players set @a {objective_name} 1']
 		
-		functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 1.. }}] at @s run function {namespaced_selector}')
+		functions['tick'].execute().as_('@a').if_score_matches('@s', objective_name, '1..').at('@s').run(Function(namespaced_selector))
 
 		execute_conditions_list = [
-			lambda adv_child: f'if entity @e[distance = ..64, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
+			lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child, 64))
 		]
 
 		reset_objective = True
@@ -490,13 +501,13 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 		advancements[helper_selector].rewards.function = namespaced_helper
 		functions[helper_selector] = [f'scoreboard players set @a {objective_name} 1']
 
-		functions['tick'].append(f'execute as @a[scores = {{ {objective_name} = 1.. }}] at @s run function {namespaced_selector}')
+		functions['tick'].execute().as_('@a').if_score_matches('@s', objective_name, '1..').at('@s').run(Function(namespaced_selector))
 				
 		parent_name = get_upper_selector(adv_link.selector)
 		advancements[pathed_selector].display.description = f'{parent_name} Loot Table Reference'
 
 		execute_conditions_list = [
-			lambda adv_child: f'if entity @e[distance = ..64, type = minecraft:item, limit = 1, nbt = {{ Age: 0s, Item:{{ id:"minecraft:{adv_child.item_selector}" }} }}]'
+			lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child, 64))
 		]
 
 		reset_objective = True
@@ -518,11 +529,15 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
 	if use_helper:
 		functions[pathed_selector].append(f'advancement revoke @s[scores = {{ mcr_incomplete = 1.. }}] only {namespaced_helper}')
 
-	functions[pathed_selector].append(f'advancement grant @s{grant_target_selector} only {namespaced_selector}')
-	functions[pathed_selector].append(f'scoreboard players reset @s[scores = {{ mcr_incomplete = 0 }}] {objective_name}')
+	(functions[pathed_selector]
+		.custom(f'advancement grant @s{grant_target_selector} only {namespaced_selector}')
+		.custom(f'scoreboard players reset @s[scores = {{ mcr_incomplete = 0 }}] {objective_name}')
+	)
 	
-	functions[pathed_selector].append(f'execute if @s show_debug = 1 run tell @s @s triggered {namespaced_selector} : obj {objective_name}')
-	functions[pathed_selector].append('execute if @s show_debug = 1 run tellraw @s [{ "text": "complete:"}, { "score": { "name": "@s", "objective": "mcr_complete" } }, { "text": ", mcr_incomplete:" },{ "score": { "name": "@s", "objective": "incomplete" } }]')
+	(functions[pathed_selector]
+		.execute().if_score_matches('@s', 'show_debug', 1).run(f'tell @s @s triggered {namespaced_selector} : obj {objective_name}')
+		.execute().if_score_matches('@s', 'show_debug', 1).run('tellraw @s [{ "text": "complete:"}, { "score": { "name": "@s", "objective": "mcr_complete" } }, { "text": ", mcr_incomplete:" },{ "score": { "name": "@s", "objective": "incomplete" } }]')
+	)
 
 def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: str, parent_item_selector: str = None, parent_item_is_correct: bool = False, hidden: bool = True, gen_base_criteria: bool = True, show: bool = True, announce: bool = True):
 	selector = adv_link.selector

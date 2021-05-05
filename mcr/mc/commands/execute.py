@@ -121,7 +121,7 @@ class Execute(Command[T]):
 	def store_success_entity(self, target: Entity, path: NBTPath, nbtType: eNBTType, scale: float):
 		return self.store(eStoreReturn.success, eStoreContainer.entity, f'{target} {path} {nbtType} {scale}')
 
-	def store_result_score(self, name: Entity, objective: Objective):
+	def store_result_score(self, name: Union[Entity, str], objective: Union[Objective, str]):
 		return self.store(eStoreReturn.result, eStoreContainer.score, f'{name} {objective}')
 
 	def store_success_score(self, name: Entity, objective: Objective):
@@ -137,6 +137,7 @@ class Execute(Command[T]):
 		return self._appendChainSelf(f'{"if" if isIf else "unless"} {testType} {arguments}')
 
 	def if_block(self, pos: BlockPos, block: Union[NamespacedId, str]):
+		#TODO: fix block should allow nbt? data of some sort
 		return self.if_unless(True, eConditionalType.block, f'{pos} {block}')
 
 	def unless_block(self, pos: BlockPos, block: Union[NamespacedId, str]):
@@ -184,11 +185,11 @@ class Execute(Command[T]):
 	def unless_score(self, target: Entity, targetObjective: Objective, comparison: eComparison, source: Entity, sourceObjective: Objective):
 		return self.if_unless(False, eConditionalType.score, f'{target} {targetObjective} {comparison} {source} {sourceObjective}')
 
-	def if_score_matches(self, target: Entity, targetObjective: Objective, range: IntRange):
+	def if_score_matches(self, target: Union[Entity, str], targetObjective: Union[Objective, str], range: Union[IntRange, str, int]):
 		return self.if_unless(True, eConditionalType.score, f'{target} {targetObjective} matches {range}')
 	
 	def unless_score_matches(self, target: Union[Entity, str], targetObjective: Union[Objective, str], range: Union[IntRange, str, int]):
 		return self.if_unless(False, eConditionalType.score, f'{target} {targetObjective} matches {range}')
 
-	def run(self, command: Union(Command, str)):
+	def run(self, command: Union[Command, str]):
 		return self._appendChainOwner(f'run {command}')

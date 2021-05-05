@@ -29,7 +29,7 @@ class selector(str, Enum):
 	all_entities	= '@e'
 	current			= '@s'
 
-class Entity(str):
+class Entity():
 	def __init__(self, selector: Union[str, selector], variables: Union[str, dict] = None):
 		self.selector = selector
 		self.variables = variables
@@ -43,13 +43,13 @@ class entity_anchor(str, Enum):
 	feet	= 'feet'
 	eyes	= 'eyes'
 
-class IntRange(str):
+class IntRange():
 	pass
 
-class NBTPath(str):
+class NBTPath():
 	pass
 
-class NamespacedId(str):
+class NamespacedId():
 	pass
 
 class Rotation():
@@ -61,7 +61,7 @@ class Rotation():
 	def __str__(self):
 		return f'{self.rel}{self.x} {self.rel}{self.y}'
 
-class Objective(str):
+class Objective():
 	pass
 
 class swizzle(str, Enum):
