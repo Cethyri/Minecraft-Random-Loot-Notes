@@ -10,3 +10,6 @@ loot_tables
 restrictions
 randomized
 test.py
+
+
+.pylintrc
