@@ -1,29 +1,29 @@
 import json
-from typing import List
+from typing import Any, List
 
 from mcr.helpers.regex import remove_initial_dashes
 
 flagFile = 'mcr/data/flags.json'
 
-def help(json_flags: dict):
-	for flag, flagInfo in json_flags:
+def flagHelp(json_flags: dict[str, Any]):
+	for flag, flagInfo in json_flags.items():
 		print(f'{flag}:')
 		print(f'    {flagInfo["explanation"]}')
 		if 'warning' in flagInfo:
 			print(f'    [Warning] {flagInfo["warning"]}')
 		print()
 
-def handleflags(args: List[str]):
+def handleFlags(args: List[str]):
 	with open(flagFile) as json_file:
 		json_flags = json.load(json_file)
 
 	if len(args) > 1 and 'help' in args[1]:
-		help(json_flags)
+		flagHelp(json_flags)
 		return None
 
 	print('Checking flags and setting up...')
 
-	flags = {}
+	flags: dict[str, Any] = {}
 	for flag in json_flags:
 		flags[flag] = False
 

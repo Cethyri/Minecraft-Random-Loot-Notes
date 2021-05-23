@@ -1,32 +1,32 @@
+from typing import Any, List, TypeVar
+
 from mcr.mc.commands.argument_types import NamespacedId
-from mcr.mc.commands.function import Function
 from mcr.mc.commands.execute import Execute
-from typing import List, TypeVar, Union
-from mcr.mc.commands.command import Command
+from mcr.mc.commands.function import Function
 
-C = TypeVar('C')
+C = TypeVar('C', bound=Command)
 
-# check what vars() does 
+# check what vars() does
 
-class MCFunction(List[Union[Command, str]]):
 
-	def _appendChainSelf(self, command):
-		self.append(command)
-		return self
+class MCFunction(List[Any]):
 
-	def _appendChainCommand(self, command):
-		self.append(command)
-		return command
+    def _chainSelf(self, command: Any):
+        self.append(command)
+        return self
 
-	def custom(self, command):
-		return self._appendChainSelf(command)
+    def _chainCommand(self, command: C) -> C:
+        self.append(command)
+        return command
 
-	def execute(self, initialCommand: str = 'execute'):
-		return self._appendChainCommand(Execute(initialCommand, self))
+    def custom(self, command: Any):
+        return self._chainSelf(command)
 
-	def function(self, name: Union[NamespacedId, str]):
-		return self._appendChainSelf(Function(name))
+    def execute(self, initialCommand: str = 'execute'):
+        return self._chainCommand(Execute(initialCommand, self))
 
-	@property
-	def __str__(self):
-		return '\r\n'.join(self)
+    def function(self, name: NamespacedId):
+        return self._chainSelf(Function(name))
+
+    def __str__(self):
+        return '\r\n'.join(str(command) for command in self)
