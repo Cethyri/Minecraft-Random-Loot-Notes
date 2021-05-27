@@ -1,39 +1,113 @@
-from typing import Callable
+from abc import ABC, abstractstaticmethod
+from typing import Any, Callable, Optional, Tuple, Union, get_args, get_origin, get_type_hints
+
+callOrCast = Callable[[Any], Any]
 
 
-def _dynamic_getter(key: str):
-	def getter(self):
-		return self[key]
+def baseOrOrigin(type_: type):
+    return get_origin(type_) or type_
 
-	return getter
 
-def _dynamic_setter(key: str):
-	def setter(self, value):
-		self[key] = value
-	
-	return setter
+class SpecialInit(ABC):
+    @abstractstaticmethod
+    def create(value: Any):
+        pass
 
-def _dynamic_deleter(key: str):
-	def deleter(self):
-		del self[key]
-	
-	return deleter
+
+class JsonDict(dict[str, Any]):
+    overrides: dict[str, Union[callOrCast, Tuple[str, callOrCast]]] = {}
+
+    def __init_subclass__(cls, overrides: Optional[dict[str, Union[callOrCast, Tuple[str, callOrCast]]]] = None):
+        cls.overrides = overrides or {}
+        for baseCls in cls.__bases__:
+            if issubclass(baseCls, JsonDict) and baseCls.overrides is not None:
+                cls.overrides = cls.overrides | baseCls.overrides
+
+        typehints = get_type_hints(cls)
+
+        for name, type_ in typehints.items():
+            # check if the cls has a value for name, if it does then ignore, assume it is already a property or it is not json specific
+            if name in vars(cls):
+                continue
+
+            key: str = name
+            init: callOrCast = baseOrOrigin(type_)
+            json_property: Callable[[str, callOrCast], property] = json_basic
+
+            if name in cls.overrides:
+                override = cls.overrides[name]
+                if isinstance(override, tuple):
+                    key = override[0]
+                    init = override[1]
+                else:
+                    init = override
+            else:
+                if init is list:
+                    json_property = json_list
+                    init = baseOrOrigin(get_args(type_)[0])
+                elif init is dict:
+                    json_property = json_dict
+                    init = baseOrOrigin(get_args(type_)[1])
+
+                if isinstance(init, type) and issubclass(init, SpecialInit):
+                    init = init.create
+
+                if not callable(init):
+                    def noChange(x: Any):
+                        return x
+                    init = noChange
+
+            setattr(cls, name, json_property(key, init))
+
+    def __init__(self, jsonDict: Optional[dict[str, Any]] = None):
+        if jsonDict is None:
+            return
+
+        classes = list(self.__class__.__bases__)
+        classes.append(self.__class__)
+
+        for cls in classes:
+            for value in vars(cls).values():
+                if isinstance(value, _JsonProperty):
+                    key = value.key
+                    if key in jsonDict:
+                        self[key] = value.init(jsonDict[key])
+
+        for key, value in jsonDict.items():
+            if key not in self:
+                self[key] = value
+
+        super().__init__()
+
 
 class _JsonProperty(property):
-	def __init__(self, key: str, init: Callable, getter: Callable, setter: Callable, deleter: Callable):
-		super().__init__(getter, setter, deleter)
-		self.key = key
-		self.init = init
+    def __init__(self, key: str, init: Callable[[Any], Any]):
+        def getter(self: dict[str, Any]):
+            return self[key]
 
-def json_basic(key: str, init: Callable) -> property:
-	return _JsonProperty(key, init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
+        def setter(self: dict[str, Any], value: Any):
+            self[key] = value
 
-def json_list(key: str, init: Callable) -> property:
-	list_init = lambda list_val: [init(v) for v in list_val]
+        def deleter(self: dict[str, Any]):
+            del self[key]
 
-	return _JsonProperty(key, list_init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
+        super().__init__(getter, setter, deleter)
+        self.key = key
+        self.init = init
 
-def json_dict(key: str, init: Callable) -> property:
-	dict_init = lambda dict_val: { k: init(v) for k, v in dict_val.items() }
 
-	return _JsonProperty(key, dict_init, _dynamic_getter(key), _dynamic_setter(key), _dynamic_deleter(key))
+json_basic: Callable[[str, Callable[[Any], Any]], property] = _JsonProperty
+
+
+def json_list(key: str, init: Callable[[Any], Any]) -> property:
+    def list_init(list_val: list[Any]):
+        return [init(v) for v in list_val]
+
+    return _JsonProperty(key, list_init)
+
+
+def json_dict(key: str, init: Callable[[Any], Any]) -> property:
+    def dict_init(dict_val: dict[Any, Any]):
+        return {k: init(v) for k, v in dict_val.items()}
+
+    return _JsonProperty(key, dict_init)

@@ -1,16 +1,25 @@
 from abc import ABC
 from enum import Enum
-from typing import (Any, Generic, Literal, Optional, TypeVar, Union, overload)
+from typing import (Any, Literal, Optional, Union, overload)
 
 from mcr.mc.data_structures.nbt import NBT
 
 # Put in Safeties (errors thrown on invalid arguments)
 
 
-class dimension(str, Enum):
+int_or_float = Union[int, float]
+
+
+class eDimension(str, Enum):
     overworld = 'minecraft:overworld'
     the_nether = 'minecraft:the_nether'
     the_end = 'minecraft:the_end'
+
+
+dimensionLiteral = Literal['minecraft:overworld',
+                           'minecraft:the_nether',
+                           'minecraft:the_end']
+dimension = Union[eDimension, dimensionLiteral]
 
 
 class eSelector(str, Enum):
@@ -22,8 +31,9 @@ class eSelector(str, Enum):
 
 
 selectorLiteral = Literal['@p', '@r', '@a', '@e', '@s']
-
 selector = Union[eSelector, selectorLiteral]
+
+
 class Entity():
     def __init__(self, selector_: Union[str, selector], arguments: Union[str, dict[str, Any], None] = None):
         self.selector_ = selector_
@@ -36,24 +46,41 @@ class Entity():
         return f'{self.selector_}{var_list}'
 
 
-class entity_anchor(str, Enum):
+class eEntityAnchor(str, Enum):
     feet = 'feet'
     eyes = 'eyes'
 
 
-feet = entity_anchor.feet
-eyes = entity_anchor.eyes
+entityAnchorLiteral = Literal['eyes', 'feet']
+entity_anchor = Union[eEntityAnchor, entityAnchorLiteral]
 
 # override accessor [] to use range syntax [1:]
 
 
 class IntRange():
-    pass
+    def __init__(self, eq: Optional[int_or_float] = None, low: Optional[int_or_float] = None, high: Optional[int_or_float] = 0) -> None:
+        self.r = str(eq) or f'{low or ""}..{high or ""}'
+        if self.r == '..':
+            self.r = '0'
 
+    @staticmethod
+    def eq(eq: int_or_float):
+        return IntRange(eq)
 
-class eNBTCurrentResult(Enum):
-    root = 'root'
-    tags = 'tags'
+    @staticmethod
+    def le(low: int_or_float):
+        return IntRange(low=low)
+
+    @staticmethod
+    def ge(high: int_or_float):
+        return IntRange(high=high)
+
+    @staticmethod
+    def bt(low: int_or_float, high: int_or_float):
+        return IntRange(low=low, high=high)
+
+    def __str__(self) -> str:
+        return self.r
 
 
 class Node(ABC):
@@ -123,8 +150,6 @@ class AllElementsOf(Node):
     @property
     def canBeSubListed(self) -> bool:
         return True
-
-# maybe make subclass of elements of sublist
 
 
 class CompoundElementsOf(Node):
@@ -247,7 +272,7 @@ class Objective():
         return self.objectiveName
 
 
-class swizzle(str, Enum):
+class eSwizzle(str, Enum):
     x = 'x'
     y = 'y'
     z = 'z'
@@ -257,49 +282,56 @@ class swizzle(str, Enum):
     xyz = 'xyz'
 
 
-VecType = TypeVar('VecType', int, float)
+swizzleLiteral = Literal['x', 'y', 'z', 'xy', 'xz', 'yz', 'xyz']
+swizzle = Union[eSwizzle, swizzleLiteral]
 
 
-class relative_symbol(str, Enum):
+class eRelativeSymbol(str, Enum):
     relative = '~'
     local = '^'
 
-# Add Literal Support
-class Vec3(Generic[VecType]):
-    def __init__(self, x: VecType = 0, y: VecType = 0, z: VecType = 0, rel: Union[relative_symbol, str] = ''):
+
+relativeSymbolLiteral = Literal['~', '^']
+relative_symbol = Union[eRelativeSymbol, relativeSymbolLiteral]
+
+
+class Vec3():
+    def __init__(self, x: int_or_float = 0, y: int_or_float = 0, z: int_or_float = 0, rel: Optional[relative_symbol] = None):
         self.x = x or ''
         self.y = y or ''
         self.z = z or ''
-        self.relx = rel
-        self.rely = rel
-        self.relz = rel
+        self.relx = rel or ''
+        self.rely = rel or ''
+        self.relz = rel or ''
 
-    @property
-    def rel(self, rel: Union[swizzle, str] = swizzle.xyz):
-        self.relx = relative_symbol.relative if 'x' in rel else self.relx
-        self.rely = relative_symbol.relative if 'y' in rel else self.rely
-        self.relz = relative_symbol.relative if 'z' in rel else self.relz
+    def rel(self, rel: relative_symbol = '~', which: swizzle = eSwizzle.xyz):
+        self.relx = rel if 'x' in which else self.relx
+        self.rely = rel if 'y' in which else self.rely
+        self.relz = rel if 'z' in which else self.relz
         return self
 
     @property
     def loc(self):
-        self.relx = '^'
-        self.rely = '^'
-        self.relz = '^'
-        return self
+        return self.rel(eRelativeSymbol.local)
 
     def __str__(self):
-        return f'{self.relx}{self.x} {self.rely}{self.y} {self.relz}{self.z}'
+        x = f'{self.relx}{self.x}' or 0
+        y = f'{self.rely}{self.y}' or 0
+        z = f'{self.relz}{self.z}' or 0
+        return f'{x} {y} {z}'
 
 
-class Vec2(Vec3[VecType]):
-    def __init__(self, x: VecType = 0, y: VecType = 0, rel: Union[relative_symbol, str] = ''):
-        # super().__init__(x, y, rel=rel)
-        raise NotImplementedError('Nope')
-        pass
+class Vec2(Vec3):
+    def __init__(self, x: int_or_float = 0, y: int_or_float = 0, rel: Optional[relative_symbol] = None):
+        super().__init__(x, y, rel=rel)
+
+    def rel(self, rel: relative_symbol = '~', which: swizzle = eSwizzle.xy):
+        return super().rel(rel, which)
 
     def __str__(self):
-        return f'{self.relx}{self.x} {self.rely}{self.y}'
+        x = f'{self.relx}{self.x}' or 0
+        y = f'{self.rely}{self.y}' or 0
+        return f'{x} {y}'
 
 
 BlockPos = Vec3
