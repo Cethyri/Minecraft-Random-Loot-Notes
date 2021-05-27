@@ -1,99 +1,103 @@
-from typing import List, Union, Callable
+from typing import Any, List
 from enum import Enum
 
-from mcr.mc.base import JsonDict
-from mcr.mc.properties import json_basic, json_list
+from mcr.mc.properties import JsonDict, SpecialInit
 from mcr.mc.interactable import MCInteractable, MCActionInfo, eItemType, eActionType, interact_with_items, interact_with_subitems
 
 from mcr.mc.data_structures.condition import Condition
 from mcr.mc.data_structures.function import Function
 
+
 class eEntry(str, Enum):
-	item			= 'minecraft:item'
-	tag				= 'minecraft:tag'
-	loot_table		= 'minecraft:loot_table'
-	group			= 'minecraft:group'
-	alternatives	= 'minecraft:alternatives'
-	sequence		= 'minecraft:sequence'
-	dynamic			= 'minecraft:dynamic'
-	empty			= 'minecraft:empty'
+    item = 'minecraft:item'
+    tag = 'minecraft:tag'
+    loot_table = 'minecraft:loot_table'
+    group = 'minecraft:group'
+    alternatives = 'minecraft:alternatives'
+    sequence = 'minecraft:sequence'
+    dynamic = 'minecraft:dynamic'
+    empty = 'minecraft:empty'
+
 
 class eDynamic(str, Enum):
-	contents = 'minecraft:contents'
-	dyn_self = 'minecraft:self'
+    contents = 'minecraft:contents'
+    self_ = 'minecraft:self'
 
 
-class Entry(JsonDict, MCInteractable):
-	conditions:	List[Condition]	= json_list('conditions', Condition.create)
-	typ:		eEntry			= json_basic('type', eEntry)
-	weight:		int				= json_basic('weight', int)
-	quality:	int				= json_basic('quality', int)
+class Entry(JsonDict, MCInteractable, SpecialInit, overrides={'type_': 'type'}):
+    conditions:	List[Condition]
+    type_:		eEntry
+    weight:		int
+    quality:	int
 
-	def interact(self, info: MCActionInfo):
-		if info.item_type == eItemType.Entry and 'children' in self:
-			interact_with_items(self, 'children', info)
+    def interact(self, info: MCActionInfo):
+        if info.item_type == eItemType.Entry and 'children' in self:
+            interact_with_items(self, 'children', info)
 
-		elif info.item_type == eItemType.Condition:
-			if 'conditions' in self:
-				interact_with_items(self, 'conditions', info)
-			if 'children' in self:
-				interact_with_subitems(self['children'], info)
-				if info.action_type is eActionType.Delete and self.typ is eEntry.alternatives and not any('conditions' in child for child in self['children']):
-					self.typ = eEntry.group
-			if 'functions' in self:
-				interact_with_subitems(self['functions'], info)
+        elif info.item_type == eItemType.Condition:
+            if 'conditions' in self:
+                interact_with_items(self, 'conditions', info)
+            if 'children' in self:
+                interact_with_subitems(self['children'], info)
+                if info.action_type is eActionType.Delete and self.type_ is eEntry.alternatives and not any('conditions' in child for child in self['children']):
+                    self.type_ = eEntry.group
+            if 'functions' in self:
+                interact_with_subitems(self['functions'], info)
 
-	@staticmethod
-	def create(json_body):
-		typ = json_body['type']
+    @staticmethod
+    def create(value: dict[str, Any]):
+        type_ = value['type']
 
-		if typ == eEntry.item:
-			return ItemEntry(json_body)
+        if type_ == eEntry.item:
+            return ItemEntry(value)
 
-		elif typ == eEntry.tag:
-			return TagEntry(json_body)
+        elif type_ == eEntry.tag:
+            return TagEntry(value)
 
-		elif typ == eEntry.loot_table:
-			return LootTableEntry(json_body)
+        elif type_ == eEntry.loot_table:
+            return LootTableEntry(value)
 
-		elif typ == eEntry.group:
-			return GroupEntry(json_body)
+        elif type_ == eEntry.group:
+            return GroupEntry(value)
 
-		elif typ == eEntry.alternatives:
-			return AlternativesEntry(json_body)
+        elif type_ == eEntry.alternatives:
+            return AlternativesEntry(value)
 
-		elif typ == eEntry.sequence:
-			return SequenceEntry(json_body)
+        elif type_ == eEntry.sequence:
+            return SequenceEntry(value)
 
-		elif typ == eEntry.dynamic:
-			return DynamicEntry(json_body)
+        elif type_ == eEntry.dynamic:
+            return DynamicEntry(value)
 
-		else:
-			return Entry(json_body)
+        else:
+            return Entry(value)
 
 
 class ItemEntry(Entry):
-	name:		str				= json_basic('name', str)
-	functions:	List[Function]	= json_list('functions', Function.create)
+    name:		str
+    functions:	List[Function]
+
 
 class TagEntry(Entry):
-	name:	str		= json_basic('name', str)
-	expand:	bool	= json_basic('expand', bool)
+    name:	str
+    expand:	bool
+
 
 class LootTableEntry(Entry):
-	name: str = json_basic('name', str)
+    name: str
+
 
 class GroupEntry(Entry):
-	children: List[Entry] = json_list('children', Entry.create)
+    children: List[Entry]
+
 
 class AlternativesEntry(Entry):
-	children: List[Entry] = json_list('children', Entry.create)
+    children: List[Entry]
+
 
 class SequenceEntry(Entry):
-	children: List[Entry] = json_list('children', Entry.create)
+    children: List[Entry]
+
 
 class DynamicEntry(Entry):
-	name: eDynamic = json_basic('name', eDynamic)
-
-
-a = property()
+    name: eDynamic

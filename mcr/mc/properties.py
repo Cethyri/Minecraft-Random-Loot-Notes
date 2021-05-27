@@ -10,14 +10,14 @@ def baseOrOrigin(type_: type):
 
 class SpecialInit(ABC):
     @abstractstaticmethod
-    def create(value: Any):
+    def create(value: Any) -> Any:
         pass
 
 
 class JsonDict(dict[str, Any]):
-    overrides: dict[str, Union[callOrCast, Tuple[str, callOrCast]]] = {}
+    overrides: dict[str, Union[str, callOrCast, Tuple[str, callOrCast]]] = {}
 
-    def __init_subclass__(cls, overrides: Optional[dict[str, Union[callOrCast, Tuple[str, callOrCast]]]] = None):
+    def __init_subclass__(cls, overrides: Optional[dict[str, Union[str, callOrCast, Tuple[str, callOrCast]]]] = None):
         cls.overrides = overrides or {}
         for baseCls in cls.__bases__:
             if issubclass(baseCls, JsonDict) and baseCls.overrides is not None:
@@ -26,12 +26,12 @@ class JsonDict(dict[str, Any]):
         typehints = get_type_hints(cls)
 
         for name, type_ in typehints.items():
-            # check if the cls has a value for name, if it does then ignore, assume it is already a property or it is not json specific
             if name in vars(cls):
                 continue
 
             key: str = name
             init: callOrCast = baseOrOrigin(type_)
+            args: Tuple[Any, ...] = get_args(type_)
             json_property: Callable[[str, callOrCast], property] = json_basic
 
             if name in cls.overrides:
@@ -39,15 +39,20 @@ class JsonDict(dict[str, Any]):
                 if isinstance(override, tuple):
                     key = override[0]
                     init = override[1]
+                elif isinstance(override, str):
+                    key = override
                 else:
                     init = override
             else:
-                if init is list:
+                if init is list and len(args) >= 1:
                     json_property = json_list
                     init = baseOrOrigin(get_args(type_)[0])
-                elif init is dict:
+                elif init is dict and len(args) >= 2:
                     json_property = json_dict
                     init = baseOrOrigin(get_args(type_)[1])
+                # elif init is Union and len(args) >= 1:
+                #     json_property = json_union
+                #     init =
 
                 if isinstance(init, type) and issubclass(init, SpecialInit):
                     init = init.create

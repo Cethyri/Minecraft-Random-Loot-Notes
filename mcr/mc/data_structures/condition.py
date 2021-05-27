@@ -1,217 +1,237 @@
-from typing import List, Callable
+from typing import Any, List, Callable
 from enum import Enum
 
-from mcr.mc.base import JsonDict
-from mcr.mc.properties import json_basic, json_list
+from mcr.mc.properties import JsonDict, SpecialInit
 from mcr.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items, interact_with_item
 
 from mcr.mc.data_structures.location import Location
 
+
 class eCondition(str, Enum):
-	alternative					= 'minecraft:alternative'
-	block_state_property		= 'minecraft:block_state_property'
-	damage_source_properties	= 'minecraft:damage_source_properties'
-	entity_present				= 'minecraft:entity_present'
-	entity_properties			= 'minecraft:entity_properties'
-	entity_scores				= 'minecraft:entity_scores'
-	inverted					= 'minecraft:inverted'
-	killed_by_player			= 'minecraft:killed_by_player'
-	location_check				= 'minecraft:location_check'
-	match_tool					= 'minecraft:match_tool'
-	random_chance				= 'minecraft:random_chance'
-	random_chance_with_looting	= 'minecraft:random_chance_with_looting'
-	reference					= 'minecraft:reference'
-	survives_explosion			= 'minecraft:survives_explosion'
-	table_bonus					= 'minecraft:table_bonus'
-	tool_enchantment			= 'minecraft:tool_enchantment'
-	weather_check				= 'minecraft:weather_check'
+    alternative = 'minecraft:alternative'
+    block_state_property = 'minecraft:block_state_property'
+    damage_source_properties = 'minecraft:damage_source_properties'
+    entity_present = 'minecraft:entity_present'
+    entity_properties = 'minecraft:entity_properties'
+    entity_scores = 'minecraft:entity_scores'
+    inverted = 'minecraft:inverted'
+    killed_by_player = 'minecraft:killed_by_player'
+    location_check = 'minecraft:location_check'
+    match_tool = 'minecraft:match_tool'
+    random_chance = 'minecraft:random_chance'
+    random_chance_with_looting = 'minecraft:random_chance_with_looting'
+    reference = 'minecraft:reference'
+    survives_explosion = 'minecraft:survives_explosion'
+    table_bonus = 'minecraft:table_bonus'
+    tool_enchantment = 'minecraft:tool_enchantment'
+    weather_check = 'minecraft:weather_check'
+
 
 class eEntity(str, Enum):
-	this			= 'this'
-	killer			= 'killer'
-	killer_player	= 'killer_player'
+    this = 'this'
+    killer = 'killer'
+    killer_player = 'killer_player'
 
-class Condition(JsonDict, MCInteractable):
-	condition: eCondition = json_basic('condition', eCondition)
 
-	def interact(self, info: MCActionInfo):
-		if info.item_type == eItemType.Condition and 'terms' in self:
-			interact_with_items(self, 'terms', info)
+class Condition(JsonDict, MCInteractable, SpecialInit):
+    condition: eCondition
 
-		if info.item_type == eItemType.Condition and 'term' in self:
-			interact_with_item(self, 'term', info)
+    def interact(self, info: MCActionInfo):
+        if info.item_type == eItemType.Condition and 'terms' in self:
+            interact_with_items(self, 'terms', info)
 
-	@staticmethod
-	def create(json_dict):
-		condition = json_dict['condition']
-		if condition == eCondition.alternative:
-			return Alternative(json_dict)
+        if info.item_type == eItemType.Condition and 'term' in self:
+            interact_with_item(self, 'term', info)
 
-		elif condition == eCondition.block_state_property:
-			return BlockStateProperty(json_dict)
+    @staticmethod
+    def create(value: dict[str, Any]):
+        condition = value['condition']
+        if condition == eCondition.alternative:
+            return Alternative(value)
 
-		elif condition == eCondition.damage_source_properties:
-			return DamageSourceProperties(json_dict)
+        elif condition == eCondition.block_state_property:
+            return BlockStateProperty(value)
 
-		elif condition == eCondition.entity_present:
-			return EntityPresent(json_dict)
+        elif condition == eCondition.damage_source_properties:
+            return DamageSourceProperties(value)
 
-		elif condition == eCondition.entity_properties:
-			return EntityProperties(json_dict)
+        elif condition == eCondition.entity_present:
+            return EntityPresent(value)
 
-		elif condition == eCondition.entity_scores:
-			return EntityScores(json_dict)
+        elif condition == eCondition.entity_properties:
+            return EntityProperties(value)
 
-		elif condition == eCondition.inverted:
-			return Inverted(json_dict)
+        elif condition == eCondition.entity_scores:
+            return EntityScores(value)
 
-		elif condition == eCondition.killed_by_player:
-			return KilledByPlayer(json_dict)
+        elif condition == eCondition.inverted:
+            return Inverted(value)
 
-		elif condition == eCondition.location_check:
-			return LocationCheck(json_dict)
+        elif condition == eCondition.killed_by_player:
+            return KilledByPlayer(value)
 
-		elif condition == eCondition.match_tool:
-			return MatchTool(json_dict)
+        elif condition == eCondition.location_check:
+            return LocationCheck(value)
 
-		elif condition == eCondition.random_chance:
-			return RandomChance(json_dict)
+        elif condition == eCondition.match_tool:
+            return MatchTool(value)
 
-		elif condition == eCondition.random_chance_with_looting:
-			return RandomChanceWithLooting(json_dict)
+        elif condition == eCondition.random_chance:
+            return RandomChance(value)
 
-		elif condition == eCondition.reference:
-			return Reference(json_dict)
+        elif condition == eCondition.random_chance_with_looting:
+            return RandomChanceWithLooting(value)
 
-		elif condition == eCondition.survives_explosion:
-			return SurvivesExplosion(json_dict)
+        elif condition == eCondition.reference:
+            return Reference(value)
 
-		elif condition == eCondition.table_bonus:
-			return TableBonus(json_dict)
+        elif condition == eCondition.survives_explosion:
+            return SurvivesExplosion(value)
 
-		elif condition == eCondition.tool_enchantment:
-			return ToolEnchantment(json_dict)
+        elif condition == eCondition.table_bonus:
+            return TableBonus(value)
 
-		elif condition == eCondition.weather_check:
-			return WeatherCheck(json_dict)
+        elif condition == eCondition.tool_enchantment:
+            return ToolEnchantment(value)
 
-		else:
-			return Condition(json_dict)
+        elif condition == eCondition.weather_check:
+            return WeatherCheck(value)
+
+        else:
+            return Condition(value)
+
 
 class Alternative(Condition):
-	terms: List[Condition] = json_list('terms', Condition.create)
+    terms: List[Condition]
+
 
 class BlockStateProperty(Condition):
-	block:		str		= json_basic('block', str)
-	properties:	dict	= json_basic('properties', dict)
+    block:		str
+    properties:	dict
+
 
 class DamageSourceProperties(Condition):
-	properties: dict = json_basic('properties', dict)
+    properties: dict
+
 
 class EntityPresent(Condition):
-	__init__ = Condition.__init__
+    pass
+
 
 class EntityProperties(Condition):
-	entity:		eEntity	= json_basic('entity', eEntity)
-	predicate:	dict	= json_basic('predicate', dict)
+    entity:		eEntity
+    predicate:	dict
+
 
 class EntityScores(Condition):
-	entity: eEntity	= json_basic('entity', eEntity)
-	scores: dict	= json_basic('scores', dict)
+    entity: eEntity
+    scores: dict
+
 
 class Inverted(Condition):
-	term: Condition = json_basic('term', Condition.create)
+    term: Condition
+
 
 class KilledByPlayer(Condition):
-	inverse: bool = json_basic('inverse', bool)
+    inverse: bool
+
 
 class LocationCheck(Condition):
-	predicate: Location = json_basic('predicate', Location)
+    predicate: Location
+
 
 class MatchTool(Condition):
-	predicate:	dict	= json_basic('predicate', dict)
+    predicate:	dict
+
 
 class RandomChance(Condition):
-	pass
+    pass
+
 
 class RandomChanceWithLooting(Condition):
-	pass
+    pass
+
 
 class Reference(Condition):
-	pass
+    pass
+
 
 class SurvivesExplosion(Condition):
-	pass
+    pass
+
 
 class TableBonus(Condition):
-	pass
+    pass
+
 
 class ToolEnchantment(Condition):
-	pass
+    pass
+
 
 class WeatherCheck(Condition):
-	pass
+    pass
 
 
 class eRestriction(str, Enum):
-	none			= 0
-	type_specific	= 1
-	table_specific	= 2
-	dont_validate	= -1
-	other			= -2
+    none = 0
+    type_specific = 1
+    table_specific = 2
+    dont_validate = -1
+    other = -2
+
 
 def get_restriction_level(condition: Condition):
-	restriction = eRestriction.other
+    restriction = eRestriction.other
 
-	if condition.condition == eCondition.alternative:
-		restriction = eRestriction.dont_validate
+    if condition.condition == eCondition.alternative:
+        restriction = eRestriction.dont_validate
 
-	elif condition.condition == eCondition.block_state_property:
-		restriction = eRestriction.table_specific
+    elif condition.condition == eCondition.block_state_property:
+        restriction = eRestriction.table_specific
 
-	elif condition.condition == eCondition.damage_source_properties:
-		restriction = eRestriction.type_specific
+    elif condition.condition == eCondition.damage_source_properties:
+        restriction = eRestriction.type_specific
 
-	elif condition.condition == eCondition.entity_present:
-		pass
+    elif condition.condition == eCondition.entity_present:
+        pass
 
-	elif condition.condition == eCondition.entity_properties:
-		restriction = eRestriction.type_specific
+    elif condition.condition == eCondition.entity_properties:
+        restriction = eRestriction.type_specific
 
-	elif condition.condition == eCondition.entity_scores:
-		restriction = eRestriction.dont_validate
+    elif condition.condition == eCondition.entity_scores:
+        restriction = eRestriction.dont_validate
 
-	elif condition.condition == eCondition.inverted:
-		restriction = eRestriction.dont_validate
+    elif condition.condition == eCondition.inverted:
+        restriction = eRestriction.dont_validate
 
-	elif condition.condition == eCondition.killed_by_player:
-		restriction = eRestriction.type_specific
+    elif condition.condition == eCondition.killed_by_player:
+        restriction = eRestriction.type_specific
 
-	elif condition.condition == eCondition.location_check:
-		restriction = eRestriction.none
+    elif condition.condition == eCondition.location_check:
+        restriction = eRestriction.none
 
-	elif condition.condition == eCondition.match_tool:
-		restriction = eRestriction.type_specific
+    elif condition.condition == eCondition.match_tool:
+        restriction = eRestriction.type_specific
 
-	elif condition.condition == eCondition.random_chance:
-		restriction = eRestriction.none
+    elif condition.condition == eCondition.random_chance:
+        restriction = eRestriction.none
 
-	elif condition.condition == eCondition.random_chance_with_looting:
-		restriction = eRestriction.type_specific
+    elif condition.condition == eCondition.random_chance_with_looting:
+        restriction = eRestriction.type_specific
 
-	elif condition.condition == eCondition.reference:
-		pass
+    elif condition.condition == eCondition.reference:
+        pass
 
-	elif condition.condition == eCondition.survives_explosion:
-		restriction = eRestriction.type_specific
+    elif condition.condition == eCondition.survives_explosion:
+        restriction = eRestriction.type_specific
 
-	elif condition.condition == eCondition.table_bonus:
-		restriction = eRestriction.none
+    elif condition.condition == eCondition.table_bonus:
+        restriction = eRestriction.none
 
-	elif condition.condition == eCondition.tool_enchantment:
-		restriction = eRestriction.type_specific
+    elif condition.condition == eCondition.tool_enchantment:
+        restriction = eRestriction.type_specific
 
-	elif condition.condition == eCondition.weather_check:
-		pass
+    elif condition.condition == eCondition.weather_check:
+        pass
 
-	return restriction
+    return restriction
