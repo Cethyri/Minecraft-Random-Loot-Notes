@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from re import sub
 from typing import Any, Callable, Generic, List, TypeVar, Union, overload
 from enum import Enum
 
@@ -81,22 +80,15 @@ def interact_with_items(parent: list[list[MCInteractable]], subscript: int, info
     pass
 
 def interact_with_items(parent: Union[list[list[MCInteractable]], dict[str, list[MCInteractable]]], subscript: Union[int, str], info: MCActionInfo[Any]):
-    # if info.short_circuit:
-    #     return
-
     items = _get(parent, subscript)
 
     i = 0
     while i < len(items):
         interaction_result = interact_with_item(items, i, info)
-        # if info.short_circuit:
-        #     return
         if info.action_type != eActionType.Del or interaction_result:
             if interaction_result:
                 info.depth += 1
                 items[i].interact(info)
-                # if info.short_circuit:
-                #     return
                 info.depth -= 1
             i += 1
 
@@ -105,11 +97,7 @@ def interact_with_items(parent: Union[list[list[MCInteractable]], dict[str, list
 
 
 def interact_with_subitems(items: List[interactable], info: MCActionInfo[Any]):
-    # if info.short_circuit:
-    #     return
     for item in items:
         info.depth += 1
         item.interact(info)
-        # if info.short_circuit:
-        #     return
         info.depth -= 1
