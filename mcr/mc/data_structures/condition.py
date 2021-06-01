@@ -1,8 +1,8 @@
-from typing import Any, List, Callable
+from typing import Any, List
 from enum import Enum
 
 from mcr.mc.properties import JsonDict, SpecialInit
-from mcr.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items, interact_with_item
+from mcr.mc.interactable import MCInteractable
 
 from mcr.mc.data_structures.location import Location
 
@@ -35,13 +35,6 @@ class eEntity(str, Enum):
 
 class Condition(JsonDict, MCInteractable, SpecialInit):
     condition: eCondition
-
-    def interact(self, info: MCActionInfo):
-        if info.item_type == eItemType.Condition and 'terms' in self:
-            interact_with_items(self, 'terms', info)
-
-        if info.item_type == eItemType.Condition and 'term' in self:
-            interact_with_item(self, 'term', info)
 
     @staticmethod
     def create(value: dict[str, Any]):

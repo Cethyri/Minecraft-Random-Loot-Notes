@@ -2,7 +2,7 @@ from typing import Any
 from enum import Enum
 
 from mcr.mc.properties import JsonDict, SpecialInit
-from mcr.mc.interactable import MCInteractable, MCActionInfo, eItemType, interact_with_items
+from mcr.mc.interactable import MCInteractable
 
 from mcr.mc.data_structures.condition import Condition
 
@@ -33,10 +33,6 @@ class eFunction(str, Enum):
 class Function(JsonDict, MCInteractable, SpecialInit):
     function:	eFunction
     conditions:	list[Condition]
-
-    def interact(self, info: MCActionInfo):
-        if info.item_type == eItemType.Condition and 'conditions' in self:
-            interact_with_items(self, 'conditions', info)
 
     @staticmethod
     def create(value: dict[str, Any]):

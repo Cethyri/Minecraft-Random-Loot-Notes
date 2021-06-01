@@ -1,6 +1,7 @@
-from abc import ABC, abstractmethod
-from typing import Any, Callable, Generic, List, TypeVar, Union, overload
+from abc import ABC
+from typing import Any, Callable, Generic, TypeVar, Union
 from enum import Enum
+from dataclasses import dataclass
 
 
 class eActionType(Enum):
@@ -8,96 +9,55 @@ class eActionType(Enum):
     Set = 1
     Del = 2
 
+
 T = TypeVar('T')
 
+
+@dataclass
+class MCActionResult(Generic[T]):
+    value: Union[None, T, bool]
+    result: eActionType
+
+
+@dataclass
 class MCActionInfo(Generic[T]):
-    def __init__(self, item_type: type[T], action: Callable[[Any, 'MCActionInfo[Any]'], T], action_type: eActionType):
-        self.item_type:     type[T] = item_type
-        self.action:        Callable[[Any, 'MCActionInfo[Any]'], Any] = action
-        self.action_type:	eActionType = action_type
-        self.depth:         int = 0
-        self.short_circuit: bool = False
+    item_type:      type[T]
+    action:         Callable[[Any, 'MCActionInfo[Any]'], MCActionResult[T]]
+    action_type:	eActionType
 
 
-class MCInteractable(ABC):
-    @abstractmethod
+class MCInteractable(ABC, dict[str, Any]):
     def interact(self, info: MCActionInfo[Any]):
-        pass
+        for key in list(self.keys()):
+            interact_with_item(self, key, info)
 
-def _get(parent: Union[list[T], dict[str, T]], subscript: Union[int, str]) -> T:
-    if (isinstance(parent, list) and isinstance(subscript, int)):
-        return parent[subscript]
-    elif (isinstance(parent, dict) and isinstance(subscript, str)):
-        return parent[subscript]
-    else:
-        raise Exception('Subscript does not match parent type.')
 
-def _set(parent: Union[list[T], dict[str, T]], subscript: Union[int, str], value: T):
-    if (isinstance(parent, list) and isinstance(subscript, int)):
-        parent[subscript] = value
-    elif (isinstance(parent, dict) and isinstance(subscript, str)):
-        parent[subscript] = value
-    else:
-        raise Exception('Subscript does not match parent type.')
+def interact_with_item(items: Union[dict[str, Any], list[Any]], subscript: Any, info: MCActionInfo[Any]) -> bool:
+    item = items[subscript]
+    if isinstance(item, info.item_type):
+        action_result = info.action(items[subscript], info)
+        if action_result.result != eActionType.Get:
+            if action_result.result == eActionType.Set:
+                items[subscript] = action_result.value
+            else:
+                del items[subscript]
+            return False
 
-def _del(parent: Union[list[T], dict[str, T]], subscript: Union[int, str]):
-    if (isinstance(parent, list) and isinstance(subscript, int)):
-        del parent[subscript]
-    elif (isinstance(parent, dict) and isinstance(subscript, str)):
-        del parent[subscript]
-    else:
-        raise Exception('Subscript does not match parent type.')
+    if isinstance(item, list):
+        interact_with_items(items, subscript, info)
 
-interactable = TypeVar('interactable', bound=MCInteractable)
-
-@overload
-def interact_with_item(items: list[MCInteractable], subscript: int, info: MCActionInfo[Any]):
-    pass
-
-@overload
-def interact_with_item(items: dict[str, MCInteractable], subscript: str, info: MCActionInfo[Any]):
-    pass
-
-def interact_with_item(items: Union[list[MCInteractable], dict[str, MCInteractable]], subscript: Union[int, str], info: MCActionInfo[Any]):
-    if info.short_circuit:
-        return
-    action_result = info.action(_get(items, subscript), info)
-    if info.action_type == eActionType.Set and action_result:
-        _set(items, subscript, action_result)
-        return False
-    elif info.action_type == eActionType.Del and action_result:
-        _del(items, subscript)
-        return False
+    if isinstance(item, MCInteractable):
+        item.interact(info)
 
     return True
 
-@overload
-def interact_with_items(parent: dict[str, list[MCInteractable]], subscript: str, info: MCActionInfo[Any]):
-    pass
 
-@overload
-def interact_with_items(parent: list[list[MCInteractable]], subscript: int, info: MCActionInfo[Any]):
-    pass
+def interact_with_items(parent: Union[dict[str, list[Any]], list[list[Any]]], subscript: Any, info: MCActionInfo[Any]):
+    items = parent[subscript].copy()
 
-def interact_with_items(parent: Union[list[list[MCInteractable]], dict[str, list[MCInteractable]]], subscript: Union[int, str], info: MCActionInfo[Any]):
-    items = _get(parent, subscript)
-
-    i = 0
-    while i < len(items):
-        interaction_result = interact_with_item(items, i, info)
-        if info.action_type != eActionType.Del or interaction_result:
-            if interaction_result:
-                info.depth += 1
-                items[i].interact(info)
-                info.depth -= 1
-            i += 1
+    for item in items:
+        interact_with_item(parent[subscript],
+                           parent[subscript].index(item), info)
 
     if len(items) == 0:
-        _del(parent, subscript)
-
-
-def interact_with_subitems(items: List[interactable], info: MCActionInfo[Any]):
-    for item in items:
-        info.depth += 1
-        item.interact(info)
-        info.depth -= 1
+        del parent[subscript]

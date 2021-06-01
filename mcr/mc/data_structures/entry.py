@@ -2,7 +2,7 @@ from typing import Any, List
 from enum import Enum
 
 from mcr.mc.properties import JsonDict, SpecialInit
-from mcr.mc.interactable import MCInteractable, MCActionInfo, eItemType, eActionType, interact_with_items, interact_with_subitems
+from mcr.mc.interactable import MCInteractable, MCActionInfo, eActionType
 
 from mcr.mc.data_structures.condition import Condition
 from mcr.mc.data_structures.function import Function
@@ -30,19 +30,11 @@ class Entry(JsonDict, MCInteractable, SpecialInit, overrides={'type_': 'type'}):
     weight:		int
     quality:	int
 
-    def interact(self, info: MCActionInfo):
-        if info.item_type == eItemType.Entry and 'children' in self:
-            interact_with_items(self, 'children', info)
-
-        elif info.item_type == eItemType.Condition:
-            if 'conditions' in self:
-                interact_with_items(self, 'conditions', info)
-            if 'children' in self:
-                interact_with_subitems(self['children'], info)
-                if info.action_type is eActionType.Delete and self.type_ is eEntry.alternatives and not any('conditions' in child for child in self['children']):
-                    self.type_ = eEntry.group
-            if 'functions' in self:
-                interact_with_subitems(self['functions'], info)
+    def interact(self, info: MCActionInfo[Any]):
+        super().interact(info)
+        # TODO check into why this is being done and comment on it
+        if info.action_type is eActionType.Del and isinstance(self, AlternativesEntry) and not any('conditions' in child for child in self.children):
+            self.type_ = eEntry.group
 
     @staticmethod
     def create(value: dict[str, Any]):

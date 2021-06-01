@@ -107,7 +107,7 @@ load_table_info(flags['hardcore'], flags['no-cheats'], flags['no-dead-ends'])
 
 print('Randomizing drops...')
 
-def is_killed_by_player(condition: Condition, info: MCActionInfo):
+def is_killed_by_player(condition: Condition, info: MCActionInfo[Any]):
     return condition.condition == eCondition.killed_by_player
 
 #For Randomization to match Sethbling's the python version must be 3.6+ (For ordered dictionaries)
@@ -252,7 +252,7 @@ def get_pathed_selector(selector: str, path: str, base: str, link_index: int):
 
 def generate_recipe(pathed_selector: str, parent_item_selector: str, parent_item_is_correct: bool, child_item_selector: str, child_item_is_correct: bool, group_selector: str):
     recipe = CraftingShaped()
-    recipe.typ = eRecipe.crafting_shaped
+    recipe.type_ = eRecipe.crafting_shaped
     recipe.group = f'rl_notes_{group_selector}'
     recipe.pattern = [
         f'{" " if parent_item_is_correct and child_item_is_correct else "B"}I',
@@ -401,7 +401,7 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
         reset_objective = True
         grant_target_selector = ''
 
-    elif loot_table_map.original.typ is eLootTable.block:
+    elif loot_table_map.original.type_ is eLootTable.block:
         objective_criteria = f'minecraft.mined:minecraft.{adv_link.selector}'
 
         functions['tick'].execute().as_('@a').if_score_matches('@s', objective, '1..').at('@s').run(selector_function)
@@ -413,7 +413,7 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
         reset_objective = True
         grant_target_selector = ''
         
-    elif loot_table_map.original.typ is eLootTable.chest:
+    elif loot_table_map.original.type_ is eLootTable.chest:
         loot_table_pathed_selector = get_pathed_selector(adv_link.selector, path, '', -1)
 
         for i in range(10):
@@ -432,7 +432,7 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
         
         reset_objective = True
 
-    elif loot_table_map.original.typ is eLootTable.gift and 'hero_of_the_village' in loot_table_map.path:
+    elif loot_table_map.original.type_ is eLootTable.gift and 'hero_of_the_village' in loot_table_map.path:
         villager_type = adv_link.selector.replace('_gift', '')
 
         as_selector = mcArgs.Entity('@a', {'nbt': '{ ActiveEffects: [{ Id: 32b }] }'})
@@ -458,7 +458,7 @@ def generate_conditions(pathed_selector: str, adv_link: AdvItem, path: str, base
             lambda adv_child: Execute.conditions().as_(f'@s[nbt = {{ Inventory: [{{ id: "minecraft:{adv_child.item_selector}" }}] }}]')
         ]
 
-    elif loot_table_map.original.typ is eLootTable.entity:
+    elif loot_table_map.original.type_ is eLootTable.entity:
         use_helper = True
 
         if adv_link.selector == 'player':
@@ -579,27 +579,27 @@ def generate_single_advancement(adv_link: AdvItem, pathed_selector: str, namespa
     current_advs_and_recipes.append(advancement)
 
 def get_parent_tab(loot_table_map: LootTableMap):
-    if loot_table_map.original.typ is eLootTable.advancement_reward:
+    if loot_table_map.original.type_ is eLootTable.advancement_reward:
         return 'advancement_reward'
-    elif loot_table_map.original.typ is eLootTable.block:
+    elif loot_table_map.original.type_ is eLootTable.block:
         return 'blocks'
-    elif loot_table_map.original.typ is eLootTable.chest:
+    elif loot_table_map.original.type_ is eLootTable.chest:
         if 'village' in loot_table_map.path:
             return 'village_chests'
         else:
             return 'chests'
-    elif loot_table_map.original.typ is eLootTable.entity:
+    elif loot_table_map.original.type_ is eLootTable.entity:
         if 'sheep' in loot_table_map.path or loot_table_map.selector == 'sheep':
             return 'sheep'
         else:
             return 'entities'
-    elif loot_table_map.original.typ is eLootTable.fishing:
+    elif loot_table_map.original.type_ is eLootTable.fishing:
         return 'fishing'
-    elif loot_table_map.original.typ is eLootTable.generic:
+    elif loot_table_map.original.type_ is eLootTable.generic:
         return 'generic_tables'
-    elif loot_table_map.original.typ is eLootTable.gift:
+    elif loot_table_map.original.type_ is eLootTable.gift:
         return 'gifts'
-    elif loot_table_map.original.typ is eLootTable.empty:
+    elif loot_table_map.original.type_ is eLootTable.empty:
         return 'no_parent'
     else:
         return 'no_parent'
