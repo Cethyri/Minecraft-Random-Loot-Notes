@@ -1,8 +1,5 @@
-from abc import ABC
 from enum import Enum
-from typing import (Any, Literal, Optional, Union, overload)
-
-from mcr.mc.data_structures.nbt import NBT
+from typing import Any, Literal, Optional, Union
 
 # Put in Safeties (errors thrown on invalid arguments)
 
@@ -35,13 +32,13 @@ selector = Union[eSelector, selectorLiteral]
 
 
 class Entity():
-    def __init__(self, selector_: Union[str, selector], arguments: Union[str, dict[str, Any], None] = None):
+    def __init__(self, selector_: Union[str, selector], **kwargs: Any):
         self.selector_ = selector_
-        self.arguments = arguments
+        self.arguments = kwargs
 
     def __str__(self):
-        var_list = ', '.join(f'{key} = {value}' for key, value in self.arguments.items(
-        )) if isinstance(self.arguments, dict) else self.arguments
+        var_list = ', '.join(f'{key} = {value}' for key,
+                             value in self.arguments.items())
         var_list = f'[{var_list}]' if self.arguments is not None else ""
         return f'{self.selector_}{var_list}'
 
@@ -81,178 +78,6 @@ class IntRange():
 
     def __str__(self) -> str:
         return self.r
-
-
-class Node(ABC):
-    @property
-    def canBeSubListed(self) -> bool:
-        return False
-
-
-class RootCompound(Node):
-    rootNBT: NBT
-
-    def __init__(self, root: NBT) -> None:
-        self.rootNBT = root
-
-    def __str__(self) -> str:
-        return str(self.rootNBT)
-
-
-class Named(Node):
-    name: str
-
-    def __init__(self, name: str) -> None:
-        super().__init__()
-        self.name = name
-
-    def __str__(self) -> str:
-        return NBT.safeTagName(self.name)
-
-
-class NamedCompound(Node):
-    name: str
-    tag: NBT
-
-    def __init__(self, name: str, tag: NBT) -> None:
-        self.name = name
-        self.tag = tag
-
-    def __str__(self) -> str:
-        return NBT.safeTagName(self.name) + str(self.tag)
-
-
-class ElementOf(Node):
-    name: str
-    index: int
-
-    def __init__(self, name: str, index: int) -> None:
-        self.name = name
-        self.index = index
-
-    def __str__(self) -> str:
-        return f'{NBT.safeTagName(self.name)}[{self.index}]'
-
-    @property
-    def canBeSubListed(self) -> bool:
-        return True
-
-
-class AllElementsOf(Node):
-    name: str
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-
-    def __str__(self) -> str:
-        return f'{NBT.safeTagName(self.name)}[]'
-
-    @property
-    def canBeSubListed(self) -> bool:
-        return True
-
-
-class CompoundElementsOf(Node):
-    name: str
-    tag: NBT
-
-    def __init__(self, name: str, tag: NBT) -> None:
-        self.name = name
-        self.tag = tag
-
-    def __str__(self) -> str:
-        return f'{NBT.safeTagName(self.name)}[{self.tag}]'
-
-
-class ElementsOfSubList(Node):
-    parent: Node
-    index: Union[int, None, NBT]
-
-    def __init__(self, parent: Node, index: Union[int, None, NBT]):
-        self.parent = parent
-        self.index = index
-
-    def __str__(self):
-        return f'{self.parent}[{"" if self.index is None else self.index}]'
-
-    @property
-    def canBeSubListed(self) -> bool:
-        return not isinstance(self.index, NBT)
-
-
-class NBTPath():
-    __path: list[Node]
-
-    @property
-    def __lastNode(self):
-        if len(self.__path) == 0:
-            # error? warn?
-            pass
-        return self.__path[~0]
-
-    def __init__(self, root: Optional[NBT] = None) -> None:
-        self.__path = list[Node]()
-        if root is not None:
-            self.__path.append(RootCompound(root))
-
-    def __getattribute__(self, name: str) -> 'NBTPath':
-        if name.startswith('_NBTPath__') or name.startswith('__'):
-            return object.__getattribute__(self, name)
-
-        self.__path.append(Named(name))
-        return self
-
-    @overload
-    def __call__(self, tag: NBT) -> 'NBTPath':
-        return self
-
-    @overload
-    def __call__(self, name: str) -> 'NBTPath':
-        return self
-
-    def __call__(self, *args: Union[NBT, str]) -> 'NBTPath':
-        arg = args[0]
-
-        if isinstance(arg, NBT):
-            lastNode = self.__lastNode
-            if isinstance(lastNode, Named):
-                self.__path[~0] = NamedCompound(lastNode.name, arg)
-            else:
-                # error? warn?
-                pass
-        else:
-            self.__path.append(Named(arg))
-
-        return self
-
-    def __getitem__(self, key: Union[str, int, slice, None, NBT] = None) -> 'NBTPath':
-        if isinstance(key, str):
-            self.__path.append(Named(key))
-        else:
-            if isinstance(key, slice):
-                if key.start or key.step or key.stop:
-                    # warn only empty slice allowed
-                    pass
-                key = None
-
-            lastNode = self.__lastNode
-
-            if lastNode.canBeSubListed:
-                self.__path[~0] = ElementsOfSubList(lastNode, key)
-            elif not isinstance(lastNode, Named):
-                # error? warn?
-                pass
-            elif isinstance(key, int):
-                self.__path[~0] = ElementOf(lastNode.name, key)
-            elif key is None:
-                self.__path[~0] = AllElementsOf(lastNode.name)
-            else:
-                self.__path[~0] = CompoundElementsOf(lastNode.name, key)
-
-        return self
-
-    def __str__(self) -> str:
-        return '.'.join(str(n) for n in self.__path)
 
 
 class NamespacedId():

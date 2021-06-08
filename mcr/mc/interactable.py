@@ -18,6 +18,10 @@ class MCActionResult(Generic[T]):
     value: Union[None, T, bool]
     result: eActionType
 
+    @staticmethod
+    def NoAction():
+        return MCActionResult[Any](None, eActionType.Get)
+
 
 @dataclass
 class MCActionInfo(Generic[T]):

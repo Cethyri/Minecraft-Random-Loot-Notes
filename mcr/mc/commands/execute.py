@@ -1,8 +1,9 @@
 from enum import Enum
-from typing import Any, Union
+from mcr.mc.data_structures.nbt import NBTPath
+from typing import Union
 
 from mcr.mc.commands.argument_types import (BlockPos, Entity, IntRange,
-                                            NamespacedId, NBTPath, Objective,
+                                            NamespacedId, Objective,
                                             Rotation, Vec3, dimension,
                                             entity_anchor, selector, swizzle)
 from mcr.mc.commands.command import ChainCommand, Command, T
@@ -88,7 +89,7 @@ class Execute(ChainCommand[T]):
     def at(self, targets: Union[Entity, selector]):
         return self._chainSelf(f'at {targets}')
 
-    def facing(self, pos: Vec3[Any]):
+    def facing(self, pos: Vec3):
         return self._chainSelf(f'facing {pos}')
 
     def facing_entity(self, target: Union[Entity, selector], anchor: entity_anchor):
@@ -97,13 +98,13 @@ class Execute(ChainCommand[T]):
     def in_(self, dim: dimension):
         return self._chainSelf(f'in {dim}')
 
-    def positioned(self, pos: Vec3[Any]):
+    def positioned(self, pos: Vec3):
         return self._chainSelf(f'positioned {pos}')
 
     def positioned_as(self, targets: Union[Entity, selector]):
         return self._chainSelf(f'positioned as {targets}')
 
-    def rotated(self, rot: Rotation[Any]):
+    def rotated(self, rot: Rotation):
         return self._chainSelf(f'rotated {rot}')
 
     def rotated_as(self, targets: Union[Entity, selector]):
@@ -112,10 +113,10 @@ class Execute(ChainCommand[T]):
     def store(self, value: eStoreReturn, target: eStoreContainer, arguments: str):
         return self._chainSelf(f'store {value} {target} {arguments}')
 
-    def store_result_block(self, targetPos: BlockPos[Any], path: NBTPath, nbtType: eNBTType, scale: float):
+    def store_result_block(self, targetPos: BlockPos, path: NBTPath, nbtType: eNBTType, scale: float):
         return self.store(eStoreReturn.result, eStoreContainer.block, f'{targetPos} {path} {nbtType} {scale}')
 
-    def store_success_block(self, targetPos: BlockPos[Any], path: NBTPath, nbtType: eNBTType, scale: float):
+    def store_success_block(self, targetPos: BlockPos, path: NBTPath, nbtType: eNBTType, scale: float):
         return self.store(eStoreReturn.success, eStoreContainer.block, f'{targetPos} {path} {nbtType} {scale}')
 
     def store_result_bossbar(self, barId: NamespacedId, target: eBossbarTarget):
@@ -145,23 +146,23 @@ class Execute(ChainCommand[T]):
     def if_unless(self, isIf: bool, testType: eConditionalType, arguments: str):
         return self._chainSelf(f'{"if" if isIf else "unless"} {testType} {arguments}')
 
-    def if_block(self, pos: BlockPos[Any], block: NamespacedId):
+    def if_block(self, pos: BlockPos, block: NamespacedId):
         # TODO: fix block should allow nbt? data of some sort
         return self.if_unless(True, eConditionalType.block, f'{pos} {block}')
 
-    def unless_block(self, pos: BlockPos[Any], block: NamespacedId):
+    def unless_block(self, pos: BlockPos, block: NamespacedId):
         return self.if_unless(False, eConditionalType.block, f'{pos} {block}')
 
-    def if_blocks(self, start: BlockPos[Any], end: BlockPos[Any], destination: BlockPos[Any], scanMode: eScanMode):
+    def if_blocks(self, start: BlockPos, end: BlockPos, destination: BlockPos, scanMode: eScanMode):
         return self.if_unless(True, eConditionalType.blocks, f'{start} {end} {destination} {scanMode}')
 
-    def unless_blocks(self, start: BlockPos[Any], end: BlockPos[Any], destination: BlockPos[Any], scanMode: eScanMode):
+    def unless_blocks(self, start: BlockPos, end: BlockPos, destination: BlockPos, scanMode: eScanMode):
         return self.if_unless(False, eConditionalType.blocks, f'{start} {end} {destination} {scanMode}')
 
-    def if_data_block(self, pos: BlockPos[Any], path: NBTPath):
+    def if_data_block(self, pos: BlockPos, path: NBTPath):
         return self.if_unless(True, eConditionalType.data, f'{eDataCheck.block} {pos} {path}')
 
-    def unless_data_block(self, pos: BlockPos[Any], path: NBTPath):
+    def unless_data_block(self, pos: BlockPos, path: NBTPath):
         return self.if_unless(False, eConditionalType.data, f'{eDataCheck.block} {pos} {path}')
 
     def if_data_entity(self, target: Union[Entity, selector], path: NBTPath):

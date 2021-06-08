@@ -1,50 +1,51 @@
 import json
 import random
-
-from typing import Any, List, Dict, Union
-from enum import Enum
-
-from mcr.mc.properties import JsonDict
-from mcr.mc.interactable import MCActionInfo, eActionType
-
-from mcr.mc.data_structures.loot_table import LootTable, eLootTable
-from mcr.mc.data_structures.entry import Entry, ItemEntry, LootTableEntry
-from mcr.mc.data_structures.display import eFrame
-from mcr.mc.data_structures.condition import Condition, eCondition, eRestriction, get_restriction_level
-from mcr.mc.data_structures.display import eFrame
-from mcr.mc.data_structures.function import eFunction
+from enum import Enum, auto
+from typing import Any, Dict, List, Optional, Union
 
 from mcr.helpers.regex import get_upper_selector
+from mcr.mc.data_structures.condition import (Condition, eCondition,
+                                              eRestriction,
+                                              get_restriction_level)
+from mcr.mc.data_structures.display import eFrame
+from mcr.mc.data_structures.entry import Entry, ItemEntry, LootTableEntry
+from mcr.mc.data_structures.function import eFunction
+from mcr.mc.data_structures.loot_table import LootTable, eLootTable
+from mcr.mc.interactable import MCActionInfo, MCActionResult, eActionType
+from mcr.mc.properties import JsonDict
 
 
-class eAdvItemType(str, Enum):
-    root = 'root'
-    block = 'block'
-    root_table = 'root_table'
-    reference = 'reference'
-    loop = 'loop'
-    from_items = 'from_items'
-    item = 'item'
-    tab = 'tab'
+class eAdvItemType(Enum):
+    root = auto()
+    block = auto()
+    root_table = auto()
+    reference = auto()
+    loop = auto()
+    from_items = auto()
+    item = auto()
+    tab = auto()
 
-    def get_frame(self):
-        if self is eAdvItemType.root or self is eAdvItemType.block:
+    @property
+    def frame(self) -> eFrame:
+        if self in [eAdvItemType.root, eAdvItemType.block]:
             return eFrame.task
-        if self is eAdvItemType.root_table or self is eAdvItemType.reference or self is eAdvItemType.loop or self is eAdvItemType.from_items:
+        if self in [eAdvItemType.root_table, eAdvItemType.reference, eAdvItemType.loop, eAdvItemType.from_items]:
             return eFrame.goal
-        if self is eAdvItemType.item or self is eAdvItemType.tab:
+        if self in [eAdvItemType.item, eAdvItemType.tab]:
             return eFrame.challenge
+
+        raise Exception('Item type does not have a corresponding frame.')
 
 
 class AdvItem(JsonDict):
     selector:		str
     item_selector:	str
     adv_item_type:	eAdvItemType
-    title:			str
-    description:	str
+    title:			Optional[str]
+    description:	Optional[str]
 
     @staticmethod
-    def populate(selector: str, adv_item_type: eAdvItemType, item_selector: str = None, title: str = None, description: str = None):
+    def populate(selector: str, adv_item_type: eAdvItemType, item_selector: Optional[str] = None, title: Optional[str] = None, description: Optional[str] = None):
         adv_item = AdvItem()
         adv_item.selector = selector
         adv_item.adv_item_type = adv_item_type
@@ -53,24 +54,29 @@ class AdvItem(JsonDict):
         adv_item.description = description
         return adv_item
 
+    @property
+    def frame(self):
+        return self.adv_item_type.frame
+
 
 path_sep = '\\'
 
 
 class LootTableMap():
-    def __init__(self, selector: str, path: List[str], loot_table: LootTable):
-        self.selector = selector
-        self.path = path
-        self.original = loot_table
-        self.is_loop = False
-        self.is_sub = False
-        self.adv_length = 0
+    remapped:       LootTable
+    remap_selector: str
+    adv_chain:      List[AdvItem]
+    adv_branches:   Dict[str, list[AdvItem]]
+    branch_map:     Dict[str, int]
 
-        self.remapped:			LootTable
-        self.remap_selector:	str
-        self.adv_chain:			List[AdvItem]
-        self.adv_branches:		Dict[str, List[AdvItem]]
-        self.branch_map:		Dict[str, int]
+    def __init__(self, selector: str, path: List[str], loot_table: LootTable):
+        self.selector: str = selector
+        self.path: list[str] = path
+        self.original: LootTable = loot_table
+        self.is_loop: bool = False
+        self.is_sub: bool = False
+        self.adv_length: float = 0
+
 
     @property
     def file_path(self) -> str:
@@ -81,7 +87,7 @@ class LootTableMap():
         return json.dumps(self.remapped)
 
 
-def create_adv_item(entry: Union[LootTableEntry, ItemEntry], loot_table_maps) -> AdvItem:
+def create_adv_item(entry: Union[LootTableEntry, ItemEntry], _: Dict[str, LootTableMap]) -> AdvItem:
     selector = entry.name.replace('minecraft:', '').rsplit('/', 1).pop()
     if isinstance(entry, LootTableEntry):
         return AdvItem.populate(selector, eAdvItemType.reference)
@@ -100,6 +106,8 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
         elif adv_link.selector in ['pumpkin_stem', 'attached_pumpkin_stem', 'melon_stem', 'attached_melon_stem']:
             adv_link.item_selector = adv_link.selector.replace(
                 'attached_', '').replace('_stem', '_seeds')
+
+            # TODO comment why this is done
             if adv_link.selector.startswith('attached'):
                 adv_link.adv_item_type = prev_type
 
@@ -272,7 +280,7 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
         adv_link.description = f'Recieve a {get_upper_selector(adv_link.selector)}'
 
     else:
-        print('Warning: unrecognized loot table type, script is probably outdated, download the newest version or yell at the developer for not updating the script!')
+        print(f'Warning: unrecognized loot table type: {loot_table_map.original.type_}, script is probably outdated, download the newest version or yell at the developer for not updating the script!')
 
     if adv_link.description is None:
         print(
@@ -285,9 +293,9 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
     current_map.adv_chain = []
     current_map.adv_branches = {}
     current_map.branch_map = {}
-    advancement_chain = current_map.adv_chain
-    advancement_branches = current_map.adv_branches
-    branch_map = current_map.branch_map
+    advancement_chain: list[AdvItem] = current_map.adv_chain
+    advancement_branches: dict[str, list[AdvItem]] = current_map.adv_branches
+    branch_map: dict[str, int] = current_map.branch_map
 
     last_link = AdvItem.populate(root_selector, eAdvItemType.root)
 
@@ -302,9 +310,10 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 
     entries: list[Union[ItemEntry, LootTableEntry]]
 
-    def collect(entry: Entry, info: MCActionInfo[Any]):
+    def collect(entry: Entry, _: MCActionInfo[Any]):
         if isinstance(entry, (ItemEntry, LootTableEntry)) and not any(entry.name == e.name and entry.type_ is e.type_ for e in entries):
             entries.append(entry)
+        return MCActionResult.NoAction()
 
     while build_chain:
         entries = []
@@ -323,7 +332,7 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 
         for entry in entries:
             adv_item = create_adv_item(entry, loot_table_maps)
-            if entry.name == 'minecraft:book' and 'functions' in entry and any(func.function is eFunction.enchant_randomly or func.function is eFunction.enchant_with_levels for func in entry.functions):
+            if entry.name == 'minecraft:book' and isinstance(entry, ItemEntry) and any(func.function is eFunction.enchant_randomly or func.function is eFunction.enchant_with_levels for func in entry.functions):
                 adv_item.selector = 'enchanted_book'
                 adv_item.item_selector = 'enchanted_book'
 
@@ -377,7 +386,7 @@ class Ref():
     variety_tracker: dict[eCondition, list[int]] = {}
     original_condition_count: int = 0
     validate_conditions = {}
-    original_conditions: dict[eCondition, Any]
+    original_conditions: dict[eCondition, list[Condition]]
 
 
 def validate_conditions(loot_table_map: LootTableMap):
@@ -385,6 +394,7 @@ def validate_conditions(loot_table_map: LootTableMap):
     Ref.original_condition_count = 0
 
     def collect(condition: Condition, _: MCActionInfo[Any]):
+        # TODO remove or implement commented code
         # if info.depth not in original_conditions:
         # 	original_conditions
         # if condition.condition not in valid_condition_types:
@@ -393,6 +403,7 @@ def validate_conditions(loot_table_map: LootTableMap):
             Ref.original_conditions[condition.condition] = []
         Ref.original_conditions[condition.condition].append(condition)
         Ref.original_condition_count += 1
+        return MCActionResult.NoAction()
 
     loot_table_map.original.interact(MCActionInfo(
         Condition, collect, eActionType.Get))
@@ -400,7 +411,7 @@ def validate_conditions(loot_table_map: LootTableMap):
     Ref.variety_tracker = create_variety(Ref.original_conditions)
     condition_maps: list[dict[str, Condition]] = []
 
-    def validate(condition: Condition, _: MCActionInfo[Any]) -> Union[Condition, None]:
+    def validate(condition: Condition, _: MCActionInfo[Any]):
         restriction_level = get_restriction_level(condition)
         restricted = True
 
@@ -420,16 +431,16 @@ def validate_conditions(loot_table_map: LootTableMap):
         condition_type_in_original = condition_type in Ref.original_conditions
 
         if not restricted:
-            return None
+            return MCActionResult.NoAction()
 
         elif condition_type_in_original:
             if condition in Ref.original_conditions[condition.condition]:
-                return None
+                return MCActionResult.NoAction()
 
             else:
                 for condition_map in condition_maps:
                     if condition_map['original'] == condition:
-                        return condition_map['remapped']
+                        return MCActionResult(condition_map['remapped'], eActionType.Set)
 
         if condition_type not in Ref.variety_tracker:
             condition_type = random.choice(list(Ref.variety_tracker))
@@ -449,11 +460,11 @@ def validate_conditions(loot_table_map: LootTableMap):
             'remapped': newCondition
         })
 
-        return newCondition
+        return MCActionResult(newCondition, eActionType.Set)
 
     if Ref.original_condition_count == 0:
         loot_table_map.remapped.interact(MCActionInfo(
-            Condition, lambda condition, info: True, eActionType.Del))
+            Condition, lambda condition, info: MCActionResult(True, eActionType.Del), eActionType.Del))
     else:
         loot_table_map.remapped.interact(MCActionInfo(
             Condition, validate, eActionType.Set))

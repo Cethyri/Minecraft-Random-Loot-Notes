@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Optional
 
 from mcr.mc.properties import JsonDict
 
@@ -43,7 +44,7 @@ class Display(JsonDict):
     hidden:				bool
 
     @staticmethod
-    def populate(icon: str, title: str, description: str, frame: str = None, background: str = None, show: bool = None, announce: bool = None, hidden: bool = None):
+    def populate(icon: str, title: str, description: str, frame: Optional[str] = None, background: Optional[str] = None, show: Optional[bool] = None, announce: Optional[bool] = None, hidden: Optional[bool] = None):
         display = Display()
         display.icon = Icon.populate(icon)
         display.title = TextComponent.populate(title)

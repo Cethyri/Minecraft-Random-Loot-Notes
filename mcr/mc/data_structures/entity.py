@@ -4,9 +4,9 @@ from mcr.mc.data_structures.position import Distance
 from mcr.mc.data_structures.location import Location
 
 
-class Entity(JsonDict):
+class Entity(JsonDict, overrides={'type_': 'type'}):
     distance:	Distance
     effects:	dict
     location:	Location
     nbt:		str
-    typ:		str
+    type_:		str
