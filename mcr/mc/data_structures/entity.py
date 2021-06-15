@@ -1,4 +1,4 @@
-from mcr.mc.properties import JsonDict
+from mcr.json_dict import JsonDict
 
 from mcr.mc.data_structures.position import Distance
 from mcr.mc.data_structures.location import Location

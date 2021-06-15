@@ -1,12 +1,16 @@
+import io
+import os
 import re
 import threading
 import tkinter as tk
+from tkinter import filedialog
 import tkinter.ttk as ttk
 from typing import Any, Callable
+import zipfile
 
 from idlelib.tooltip import Hovertip
 
-from mcr.mcrData import MCRData
+from mcr.mcr_data import MCRData
 import mcr.methods as methods
 
 
@@ -181,6 +185,8 @@ class Input(ttk.Frame):
     def _submit(self):
         self._disableMainScreen()
 
+        self._pickJar()
+
         self.tl_progress = Progress(self.mcrData)
 
         def setProgress(value: float, maximum: float):
@@ -191,6 +197,29 @@ class Input(ttk.Frame):
             methods.mc_randomizer(self.mcrData, setProgress)
 
         threading.Thread(target=start).start()
+
+    def _pickJar(self):
+        if os.path.exists(methods.TEMP_DIR):
+            for root, dirs, files in os.walk(methods.TEMP_DIR, topdown=False):
+                for name in files:
+                    os.remove(os.path.join(root, name))
+                for name in dirs:
+                    os.removedirs(os.path.join(root, name))
+            os.removedirs(methods.TEMP_DIR)
+
+        os.makedirs(methods.TEMP_DIR)
+
+        files = [('Jar Files', '*.jar')]
+        appdata: str = os.getenv('APPDATA') or "%Appdata%"
+        mc_path = os.path.join(appdata, '.minecraft', 'versions')
+
+        jarpath: io.BufferedReader = filedialog.askopenfile(
+            mode='r', filetypes=files, initialdir=mc_path)
+
+        with zipfile.ZipFile(jarpath.name, 'r') as zip_:
+            # zip_.extract('assets') # texture randomization, eh? You know you wanna!
+            files = [n for n in zip_.namelist() if n.startswith('data/')]
+            zip_.extractall(methods.TEMP_DIR, files)
 
     def _done(self):
         pass

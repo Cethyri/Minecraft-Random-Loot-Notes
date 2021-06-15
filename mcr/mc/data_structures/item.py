@@ -1,6 +1,6 @@
 from typing import Union, List
 
-from mcr.mc.properties import JsonDict
+from mcr.json_dict import JsonDict
 from mcr.mc.data_structures.range import IntRange, init_int_or_range
 
 from mcr.mc.data_structures.enchantment import Enchantment

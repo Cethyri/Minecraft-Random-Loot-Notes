@@ -1,28 +1,35 @@
 
-from dataclasses import dataclass
 import io
 import json
-from tkinter.filedialog import asksaveasfile
-import zipfile
-from mcr.mcrData import MCRData
-from mcr.mc.data_structures.display import Display
-from mcr.mc.data_structures.entity import Entity
-from mcr.mc.data_structures.criteria import Criteria, EntityKilledPlayer, FishingRodHooked, PlayerKilledEntity, eTrigger
-from mcr.mc.data_structures.nbt import NBT, NBTPath, Tag_Byte, Tag_Short
-from mcr.helpers.regex import get_upper_selector, shorten_selector
-from mcr.mc.commands.execute import Execute
-from mcr.mc.commands.mcfunction import MCFunction
-from mcr.mc.data_structures.advancement import Advancement, Rewards
-from mcr.mc.data_structures.recipe import CraftingShaped, Ingredient, Recipe, Result, eRecipe
-from mcr.mc.commands.function import Function
 import os
 import random
+from tkinter import filedialog
+import zipfile
+from dataclasses import dataclass
+from tkinter.filedialog import asksaveasfile
 from typing import Any, Callable, Optional, Union
 
-from mcr.loot_table_map import AdvItem, LootTableMap, eAdvItemType, populate_advancement_chain, validate_conditions
-from mcr.mc.data_structures.loot_table import LootTable, eLootTable
 import mcr.mc.commands.argument_types as mcArgs
+from mcr.helpers.regex import get_upper_selector, shorten_selector
+from mcr.loot_table_map import (AdvItem, LootTableMap, eAdvItemType,
+                                populate_advancement_chain,
+                                validate_conditions)
+from mcr.mc.commands.execute import Execute
+from mcr.mc.commands.function import Function
+from mcr.mc.commands.mcfunction import MCFunction
+from mcr.mc.data_structures.advancement import Advancement, Rewards
+from mcr.mc.data_structures.criteria import (Criteria, EntityKilledPlayer,
+                                             FishingRodHooked,
+                                             PlayerKilledEntity, eTrigger)
+from mcr.mc.data_structures.display import Display
+from mcr.mc.data_structures.entity import Entity
+from mcr.mc.data_structures.loot_table import LootTable, eLootTable
+from mcr.mc.data_structures.nbt import NBT, NBTPath, Tag_Byte, Tag_Short
+from mcr.mc.data_structures.recipe import (CraftingShaped, Ingredient, Recipe,
+                                           Result, eRecipe)
+from mcr.mcr_data import MCRData
 
+TEMP_DIR = 'mc_temp_dir'
 
 def initializePackInformation(mcrData: MCRData):
     if not mcrData.flags.hide_seed:
@@ -43,10 +50,12 @@ def initializePackInformation(mcrData: MCRData):
 
 
 def load_table_info(mcrData: MCRData):
-    for dirpath, _, filenames in os.walk('loot_tables'):
+    loot_table_path = os.path.join(TEMP_DIR, 'data', 'minecraft', 'loot_tables')
+
+    for dirpath, _, filenames in os.walk(loot_table_path):
         for filename in filenames:
             selector = filename.replace('.json', '')
-            path = dirpath.replace('loot_tables\\', '').split('\\')
+            path = dirpath.replace(loot_table_path + '\\', '').split('\\')
 
             if selector == 'player' and mcrData.flags.hardcore:
                 continue
@@ -638,20 +647,20 @@ def GetZipBytes(mcrData: MCRData) -> io.BytesIO:
     zip_ = zipfile.ZipFile(zipbytes, 'w', zipfile.ZIP_DEFLATED, False)
 
     for file_name, loot_table_map in mcrData.loot_table_maps.items():
-        zip_.writestr(os.path.join('data/minecraft/loot_tables',
+        zip_.writestr(os.path.join('data', 'minecraft', 'loot_tables',
                                    loot_table_map.file_path, f'{file_name}.json'), loot_table_map.contents)
 
     for full_path, advancement in mcrData.advancements.items():
         zip_.writestr(os.path.join(
-            f'data/{mcrData.datapack_name}/advancements', f'{full_path}.json'), json.dumps(advancement))
+            'data', mcrData.datapack_name, 'advancements', f'{full_path}.json'), json.dumps(advancement))
 
     for full_path, function_list in mcrData.functions.items():
         zip_.writestr(os.path.join(
-            f'data/{mcrData.datapack_name}/functions', f'{full_path}.mcfunction'), '\n'.join(function_list))
+            'data', mcrData.datapack_name, 'functions', f'{full_path}.mcfunction'), '\n'.join(function_list))
 
     for full_path, recipe in mcrData.recipes.items():
         zip_.writestr(os.path.join(
-            f'data/{mcrData.datapack_name}/recipes', f'{full_path}.json'), json.dumps(recipe))
+            'data', mcrData.datapack_name, 'recipes', f'{full_path}.json'), json.dumps(recipe))
 
     zip_.writestr('pack.mcmeta', json.dumps(
         {'pack': {'pack_format': 1, 'description': mcrData.datapack_desc}}, indent=4))
@@ -749,10 +758,10 @@ def mc_randomizer(mcrData: MCRData, setProgress: Callable[[float, float], Any] =
     initializePackInformation(mcrData)
 
     if mcrData.seed_generated:
-        print('If you want to use a specific randomizer seed, include a seed in the list of arguments. ex: "python3 mc_randomize.py 12345" or "python3 mc_randomize.py seed=12345".')
+        print('If you want to use a specific randomizer seed, include a seed in the list of arguments. ex: "python mc_randomize.py 12345" or "python mc_randomize.py seed=12345".')
 
         if not any(mcrData.flags):
-            print('Customization is available through flags. If you would like to see a list of flags use: "python3 mc_randomizer.py -help"')
+            print('Customization is available through flags. If you would like to see a list of flags use: "python mc_randomizer.py -help"')
 
     print(f'flags: {mcrData.flags}')
 

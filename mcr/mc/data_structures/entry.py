@@ -1,8 +1,8 @@
 from typing import Any, List
 from enum import Enum
 
-from mcr.mc.properties import JsonDict, SpecialInit
-from mcr.mc.interactable import MCInteractable, MCActionInfo, eActionType
+from mcr.json_dict import JsonDict, SpecialInit
+from mcr.interactable import Interactable, ActionInfo, eActionType
 
 from mcr.mc.data_structures.condition import Condition
 from mcr.mc.data_structures.function import Function
@@ -24,13 +24,13 @@ class eDynamic(str, Enum):
     self_ = 'minecraft:self'
 
 
-class Entry(JsonDict, MCInteractable, SpecialInit, overrides={'type_': 'type'}):
+class Entry(JsonDict, Interactable, SpecialInit, overrides={'type_': 'type'}):
     conditions:	List[Condition]
     type_:		eEntry
     weight:		int
     quality:	int
 
-    def interact(self, info: MCActionInfo[Any]):
+    def interact(self, info: ActionInfo[Any]):
         super().interact(info)
         # TODO check into why this is being done and comment on it
         if info.action_type is eActionType.Del and isinstance(self, AlternativesEntry) and not any('conditions' in child for child in self.children):

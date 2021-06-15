@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from mcr.mc.properties import JsonDict
+from mcr.json_dict import JsonDict
 
 
 class Icon(JsonDict):

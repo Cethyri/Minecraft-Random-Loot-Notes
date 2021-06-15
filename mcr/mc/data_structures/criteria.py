@@ -1,7 +1,7 @@
 from typing import Any, Union, List
 from enum import Enum
 
-from mcr.mc.properties import JsonDict, SpecialInit
+from mcr.json_dict import JsonDict, SpecialInit
 from mcr.mc.data_structures.range import IntRange, init_int_or_range
 
 from mcr.mc.data_structures.location import eDimension

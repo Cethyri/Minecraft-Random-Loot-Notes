@@ -1,6 +1,6 @@
 from typing import List, Dict
 
-from mcr.mc.properties import JsonDict
+from mcr.json_dict import JsonDict
 
 from mcr.mc.data_structures.display import Display
 from mcr.mc.data_structures.criteria import Criteria

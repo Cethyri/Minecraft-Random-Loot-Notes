@@ -1,7 +1,7 @@
 from enum import Enum
 
-from mcr.mc.properties import JsonDict
-from mcr.mc.interactable import MCInteractable
+from mcr.json_dict import JsonDict
+from mcr.interactable import Interactable
 
 from mcr.mc.data_structures.pool import Pool
 
@@ -18,6 +18,6 @@ class eLootTable(str, Enum):
     gift = 'minecraft:gift'
 
 
-class LootTable(JsonDict, MCInteractable, overrides={'type_': 'type'}):
+class LootTable(JsonDict, Interactable, overrides={'type_': 'type'}):
     type_:	eLootTable
     pools:	list[Pool]

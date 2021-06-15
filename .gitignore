@@ -11,5 +11,6 @@ restrictions
 randomized
 test.py
 
+mc_temp_dir
 
 .pylintrc

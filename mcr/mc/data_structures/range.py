@@ -1,6 +1,6 @@
 from typing import Union
 
-from mcr.mc.properties import JsonDict, SpecialInit
+from mcr.json_dict import JsonDict, SpecialInit
 
 
 class IntRange(JsonDict):

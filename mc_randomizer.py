@@ -4,7 +4,7 @@ from typing import Optional
 
 from mcr.flags import handleFlags
 from mcr.gui import start_app
-from mcr.mcrData import MCRData
+from mcr.mcr_data import MCRData
 
 flags_info_and_seed = handleFlags(sys.argv[1:])
 

@@ -2,7 +2,7 @@ import json
 from typing import Any, Optional, Tuple
 
 from mcr.helpers.regex import remove_initial_dashes
-from mcr.mc.properties import JsonDict
+from mcr.json_dict import JsonDict
 
 flagFile = 'mcr/data/flags.json'
 

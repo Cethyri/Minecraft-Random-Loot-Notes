@@ -1,8 +1,8 @@
 from typing import Any, List
 from enum import Enum
 
-from mcr.mc.properties import JsonDict, SpecialInit
-from mcr.mc.interactable import MCInteractable
+from mcr.json_dict import JsonDict, SpecialInit
+from mcr.interactable import Interactable
 
 from mcr.mc.data_structures.location import Location
 
@@ -33,7 +33,7 @@ class eEntity(str, Enum):
     killer_player = 'killer_player'
 
 
-class Condition(JsonDict, MCInteractable, SpecialInit):
+class Condition(JsonDict, Interactable, SpecialInit):
     condition: eCondition
 
     @staticmethod

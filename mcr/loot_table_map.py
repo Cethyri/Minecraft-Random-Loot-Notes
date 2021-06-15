@@ -12,8 +12,8 @@ from mcr.mc.data_structures.display import eFrame
 from mcr.mc.data_structures.entry import Entry, ItemEntry, LootTableEntry
 from mcr.mc.data_structures.function import eFunction
 from mcr.mc.data_structures.loot_table import LootTable, eLootTable
-from mcr.mc.interactable import MCActionInfo, MCActionResult, eActionType
-from mcr.mc.properties import JsonDict
+from mcr.interactable import ActionInfo, ActionResult, eActionType
+from mcr.json_dict import JsonDict
 
 
 class eAdvItemType(Enum):
@@ -310,14 +310,14 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 
     entries: list[Union[ItemEntry, LootTableEntry]]
 
-    def collect(entry: Entry, _: MCActionInfo[Any]):
+    def collect(entry: Entry, _: ActionInfo[Any]):
         if isinstance(entry, (ItemEntry, LootTableEntry)) and not any(entry.name == e.name and entry.type_ is e.type_ for e in entries):
             entries.append(entry)
-        return MCActionResult.NoAction()
+        return ActionResult.NoAction()
 
     while build_chain:
         entries = []
-        current_map.remapped.interact(MCActionInfo(
+        current_map.remapped.interact(ActionInfo(
             Entry, collect, eActionType.Get))
         found_link = False
 
@@ -393,7 +393,7 @@ def validate_conditions(loot_table_map: LootTableMap):
     Ref.original_conditions = {}
     Ref.original_condition_count = 0
 
-    def collect(condition: Condition, _: MCActionInfo[Any]):
+    def collect(condition: Condition, _: ActionInfo[Any]):
         # TODO remove or implement commented code
         # if info.depth not in original_conditions:
         # 	original_conditions
@@ -403,15 +403,15 @@ def validate_conditions(loot_table_map: LootTableMap):
             Ref.original_conditions[condition.condition] = []
         Ref.original_conditions[condition.condition].append(condition)
         Ref.original_condition_count += 1
-        return MCActionResult.NoAction()
+        return ActionResult.NoAction()
 
-    loot_table_map.original.interact(MCActionInfo(
+    loot_table_map.original.interact(ActionInfo(
         Condition, collect, eActionType.Get))
 
     Ref.variety_tracker = create_variety(Ref.original_conditions)
     condition_maps: list[dict[str, Condition]] = []
 
-    def validate(condition: Condition, _: MCActionInfo[Any]):
+    def validate(condition: Condition, _: ActionInfo[Any]):
         restriction_level = get_restriction_level(condition)
         restricted = True
 
@@ -431,16 +431,16 @@ def validate_conditions(loot_table_map: LootTableMap):
         condition_type_in_original = condition_type in Ref.original_conditions
 
         if not restricted:
-            return MCActionResult.NoAction()
+            return ActionResult.NoAction()
 
         elif condition_type_in_original:
             if condition in Ref.original_conditions[condition.condition]:
-                return MCActionResult.NoAction()
+                return ActionResult.NoAction()
 
             else:
                 for condition_map in condition_maps:
                     if condition_map['original'] == condition:
-                        return MCActionResult(condition_map['remapped'], eActionType.Set)
+                        return ActionResult(condition_map['remapped'], eActionType.Set)
 
         if condition_type not in Ref.variety_tracker:
             condition_type = random.choice(list(Ref.variety_tracker))
@@ -460,13 +460,13 @@ def validate_conditions(loot_table_map: LootTableMap):
             'remapped': newCondition
         })
 
-        return MCActionResult(newCondition, eActionType.Set)
+        return ActionResult(newCondition, eActionType.Set)
 
     if Ref.original_condition_count == 0:
-        loot_table_map.remapped.interact(MCActionInfo(
-            Condition, lambda condition, info: MCActionResult(True, eActionType.Del), eActionType.Del))
+        loot_table_map.remapped.interact(ActionInfo(
+            Condition, lambda condition, info: ActionResult(True, eActionType.Del), eActionType.Del))
     else:
-        loot_table_map.remapped.interact(MCActionInfo(
+        loot_table_map.remapped.interact(ActionInfo(
             Condition, validate, eActionType.Set))
 
 # TODO: this might be breaking shit

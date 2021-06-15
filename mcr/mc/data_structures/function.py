@@ -1,8 +1,8 @@
 from typing import Any
 from enum import Enum
 
-from mcr.mc.properties import JsonDict, SpecialInit
-from mcr.mc.interactable import MCInteractable
+from mcr.json_dict import JsonDict, SpecialInit
+from mcr.interactable import Interactable
 
 from mcr.mc.data_structures.condition import Condition
 
@@ -30,7 +30,7 @@ class eFunction(str, Enum):
     set_stew_effect = 'minecraft:set_stew_effect'
 
 
-class Function(JsonDict, MCInteractable, SpecialInit):
+class Function(JsonDict, Interactable, SpecialInit):
     function:	eFunction
     conditions:	list[Condition]
 

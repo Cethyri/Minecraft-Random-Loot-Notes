@@ -1,6 +1,6 @@
 from typing import Union
 
-from mcr.mc.properties import JsonDict
+from mcr.json_dict import JsonDict
 
 from mcr.mc.data_structures.range import FloatRange, init_float_or_range
 

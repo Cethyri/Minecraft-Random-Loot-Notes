@@ -14,29 +14,29 @@ T = TypeVar('T')
 
 
 @dataclass
-class MCActionResult(Generic[T]):
+class ActionResult(Generic[T]):
     value: Union[None, T, bool]
     result: eActionType
 
     @staticmethod
     def NoAction():
-        return MCActionResult[Any](None, eActionType.Get)
+        return ActionResult[Any](None, eActionType.Get)
 
 
 @dataclass
-class MCActionInfo(Generic[T]):
+class ActionInfo(Generic[T]):
     item_type:      type[T]
-    action:         Callable[[Any, 'MCActionInfo[Any]'], MCActionResult[T]]
+    action:         Callable[[Any, 'ActionInfo[Any]'], ActionResult[T]]
     action_type:	eActionType
 
 
-class MCInteractable(ABC, dict[str, Any]):
-    def interact(self, info: MCActionInfo[Any]):
+class Interactable(ABC, dict[str, Any]):
+    def interact(self, info: ActionInfo[Any]):
         for key in list(self.keys()):
             interact_with_item(self, key, info)
 
 
-def interact_with_item(items: Union[dict[str, Any], list[Any]], subscript: Any, info: MCActionInfo[Any]) -> bool:
+def interact_with_item(items: Union[dict[str, Any], list[Any]], subscript: Any, info: ActionInfo[Any]) -> bool:
     item = items[subscript]
     if isinstance(item, info.item_type):
         action_result = info.action(items[subscript], info)
@@ -50,13 +50,13 @@ def interact_with_item(items: Union[dict[str, Any], list[Any]], subscript: Any, 
     if isinstance(item, list):
         interact_with_items(items, subscript, info)
 
-    if isinstance(item, MCInteractable):
+    if isinstance(item, Interactable):
         item.interact(info)
 
     return True
 
 
-def interact_with_items(parent: Union[dict[str, list[Any]], list[list[Any]]], subscript: Any, info: MCActionInfo[Any]):
+def interact_with_items(parent: Union[dict[str, list[Any]], list[list[Any]]], subscript: Any, info: ActionInfo[Any]):
     items = parent[subscript].copy()
 
     for item in items:
