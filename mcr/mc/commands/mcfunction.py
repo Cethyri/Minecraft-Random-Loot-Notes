@@ -1,4 +1,5 @@
-from typing import Any, List, TypeVar
+from mcr.mc.commands.command import Command
+from typing import Any, TypeVar
 
 from mcr.mc.commands.argument_types import NamespacedId
 from mcr.mc.commands.execute import Execute
@@ -6,10 +7,8 @@ from mcr.mc.commands.function import Function
 
 C = TypeVar('C', bound=Command)
 
-# check what vars() does
 
-
-class MCFunction(List[Any]):
+class MCFunction(list[Any]):
 
     def _chainSelf(self, command: Any):
         self.append(command)

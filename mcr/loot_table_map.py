@@ -2,6 +2,7 @@ import json
 import random
 from enum import Enum, auto
 from typing import Any, Dict, List, Optional, Union
+import warnings
 
 from mcr.helpers.regex import get_upper_selector
 from mcr.mc.data_structures.condition import (Condition, eCondition,
@@ -77,7 +78,6 @@ class LootTableMap():
         self.is_sub: bool = False
         self.adv_length: float = 0
 
-
     @property
     def file_path(self) -> str:
         return path_sep.join(self.path)
@@ -93,7 +93,6 @@ def create_adv_item(entry: Union[LootTableEntry, ItemEntry], _: Dict[str, LootTa
         return AdvItem.populate(selector, eAdvItemType.reference)
     else:
         return AdvItem.populate(selector, eAdvItemType.item)
-
 
 def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
     if loot_table_map.original.type_ is eLootTable.block:
@@ -112,7 +111,7 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
                 adv_link.adv_item_type = prev_type
 
         elif adv_link.selector in ['beetroots', 'carrots']:
-            adv_link.item_selector = adv_link.selector[:-1]
+            adv_link.item_selector = adv_link.selector[:-1]  # remove the s
 
         elif adv_link.selector == 'potatoes':
             adv_link.item_selector = 'potato'
@@ -280,11 +279,12 @@ def fix_selector(adv_link: AdvItem, loot_table_map: LootTableMap):
         adv_link.description = f'Recieve a {get_upper_selector(adv_link.selector)}'
 
     else:
-        print(f'Warning: unrecognized loot table type: {loot_table_map.original.type_}, script is probably outdated, download the newest version or yell at the developer for not updating the script!')
+        warnings.warn(
+            f'Unrecognized loot table type: {loot_table_map.original.type_}, script is probably outdated, download the newest version or yell at the developer for not updating the script!')
 
     if adv_link.description is None:
-        print(
-            f'Warning something went wrong, description not set for: {adv_link.selector}')
+        warnings.warn(
+            f'Something went wrong, description not set for: {adv_link.selector}')
 
 
 def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, LootTableMap]):
@@ -332,7 +332,7 @@ def populate_advancement_chain(root_selector: str, loot_table_maps: Dict[str, Lo
 
         for entry in entries:
             adv_item = create_adv_item(entry, loot_table_maps)
-            if entry.name == 'minecraft:book' and isinstance(entry, ItemEntry) and any(func.function is eFunction.enchant_randomly or func.function is eFunction.enchant_with_levels for func in entry.functions):
+            if entry.name == 'minecraft:book' and isinstance(entry, ItemEntry) and 'functions' in entry and any((func.function is eFunction.enchant_randomly or func.function is eFunction.enchant_with_levels) for func in entry.functions):
                 adv_item.selector = 'enchanted_book'
                 adv_item.item_selector = 'enchanted_book'
 

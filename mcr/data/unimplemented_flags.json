@@ -1,4 +1,8 @@
 {
+    "gift-boxes": {
+		"explanation": "All empty loot tables will be filled with chest loot.",
+		"warning": "Ignored if the flag 'no-dead-ends' is not provided."
+	},
 	"loot-hints": {
 		"explanation": ""
 	},

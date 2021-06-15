@@ -1,32 +1,19 @@
 {
 	"hardcore": {
-		"explanation": "Excludes the player loot table from randomization.",
-		"warning": "Using this flag with a certain seed will be slightly different than the original."
-	},
-	"update": {
-		"explanation": "Attempts to create the datapack using pre-randomized loot-tables that you provide in the \"randomized\" folder.",
-		"warning": "Using a seed with this flag only determines how conditions get made."
+		"explanation": "Excludes the player loot table from randomization."
 	},
 	"no-cheats": {
 		"explanation": "Excludes loot tables in \"requires_cheats.json\" from randomization.",
-		"warning": "Using this flag with a certain seed will be slightly different than the original."
+        "hover": "Excludes tables only accessible through cheets:\n- Giant\n- Illusioner"
 	},
 	"no-dead-ends": {
-		"explanation": "Fills loot tables that drop nothing with randomly chosen tables.",
-		"warning": "Using this flag with a certain seed will be slightly different than the original."
-	},
-	"gift-boxes": {
-		"explanation": "All empty loot tables will be filled with chest loot.",
-		"warning": "Ignored if the flag 'no-dead-ends' is not provided."
-	},
-	"save-seed": {
-		"explanation": "Includes the randomly generated seed in the datapack name."
+		"explanation": "Fills empty loot tables with randomly chosen tables."
 	},
 	"hide-seed": {
 		"explanation": "Excludes your provided seed from the datapack name."
 	},
 	"co-op": {
-		"explanation": "Grants everyone notes for co-op play."
+		"explanation": "Grants all players randomization notes when as they are unlocked."
 	},
     "seed": {
         "usage": "[seed=]<seed>",
