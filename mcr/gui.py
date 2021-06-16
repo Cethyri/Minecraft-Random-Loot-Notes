@@ -2,6 +2,7 @@ import io
 import os
 import re
 import threading
+import tkinter.tix as tix
 import tkinter as tk
 from tkinter import filedialog
 import tkinter.ttk as ttk
@@ -72,10 +73,13 @@ class FlagsFrame(ttk.Labelframe):
 
             if flag_name in mcrData.flagInfo:
                 if 'hover' in mcrData.flagInfo[flag_name]:
+                    # tt = tix.Balloon(rb, title="tooltip")
+                    # tt.bind_widget(rb, balloonmsg=mcrData.flagInfo[flag_name]['hover'])
                     Hovertip(rb, text=mcrData.flagInfo[flag_name]['hover'])
                 elif 'explanation' in mcrData.flagInfo[flag_name]:
-                    Hovertip(
-                        rb, text=mcrData.flagInfo[flag_name]['explanation'])
+                    # tt = tix.Balloon(rb, title="tooltip")
+                    # tt.bind_widget(rb, balloonmsg=mcrData.flagInfo[flag_name]['explanation'])
+                    Hovertip(rb, text=mcrData.flagInfo[flag_name]['explanation'])
 
     def disable(self):
         for flag_name in self.cb_flags:
@@ -225,7 +229,7 @@ class Input(ttk.Frame):
         pass
 
 
-class Setup(tk.Tk):
+class Setup(tix.Tk):
     def __init__(self, *args: Any, **kwargs: Any):
 
         super().__init__(*args, **kwargs)
