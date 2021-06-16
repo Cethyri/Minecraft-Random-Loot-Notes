@@ -2,14 +2,13 @@ import io
 import os
 import re
 import threading
-import tkinter.tix as tix
 import tkinter as tk
 from tkinter import filedialog
 import tkinter.ttk as ttk
 from typing import Any, Callable
 import zipfile
 
-from idlelib.tooltip import Hovertip
+from idlelib.tooltip import Hovertip # type: ignore
 
 from mcr.mcr_data import MCRData
 import mcr.methods as methods
@@ -73,12 +72,8 @@ class FlagsFrame(ttk.Labelframe):
 
             if flag_name in mcrData.flagInfo:
                 if 'hover' in mcrData.flagInfo[flag_name]:
-                    # tt = tix.Balloon(rb, title="tooltip")
-                    # tt.bind_widget(rb, balloonmsg=mcrData.flagInfo[flag_name]['hover'])
                     Hovertip(rb, text=mcrData.flagInfo[flag_name]['hover'])
                 elif 'explanation' in mcrData.flagInfo[flag_name]:
-                    # tt = tix.Balloon(rb, title="tooltip")
-                    # tt.bind_widget(rb, balloonmsg=mcrData.flagInfo[flag_name]['explanation'])
                     Hovertip(rb, text=mcrData.flagInfo[flag_name]['explanation'])
 
     def disable(self):
@@ -229,7 +224,7 @@ class Input(ttk.Frame):
         pass
 
 
-class Setup(tix.Tk):
+class Setup(tk.Tk):
     def __init__(self, *args: Any, **kwargs: Any):
 
         super().__init__(*args, **kwargs)
