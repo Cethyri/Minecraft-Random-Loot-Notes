@@ -7,7 +7,7 @@ from mcr.json_dict import JsonDict
 flagFile = 'mcr/data/flags.json'
 
 
-class MCRFlags(JsonDict, overrides={'no_cheats': 'no-cheats', 'no_dead_ends': 'no-dead-ends', 'gift_boxes': 'gift-boxes', 'save_seed': 'save-seed', 'hide_seed': 'hide-seed', 'co_op': 'co-op'}):
+class MCRFlags(JsonDict, overrides={'no_cheats': 'no-cheats', 'no_dead_ends': 'no-dead-ends', 'hide_seed': 'hide-seed', 'co_op': 'co-op'}):
     hardcore: bool
     no_cheats: bool
     no_dead_ends: bool

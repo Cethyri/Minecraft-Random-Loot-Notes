@@ -3,7 +3,6 @@ import io
 import json
 import os
 import random
-from tkinter import filedialog
 import zipfile
 from dataclasses import dataclass
 from tkinter.filedialog import asksaveasfile
@@ -30,8 +29,10 @@ from mcr.mc.data_structures.recipe import (CraftingShaped, Ingredient, Recipe,
 from mcr.mcr_data import MCRData
 
 TEMP_DIR = 'mc_temp_dir'
+TOTAL_STEPS = 9
 
-def initializePackInformation(mcrData: MCRData):
+
+def _initializePackInformation(mcrData: MCRData):
     if not mcrData.flags.hide_seed:
         mcrData.datapack_name += f'(seed={mcrData.seed})'
 
@@ -49,8 +50,9 @@ def initializePackInformation(mcrData: MCRData):
         mcrData.double_tall_blocks = json.load(json_file)
 
 
-def load_table_info(mcrData: MCRData):
-    loot_table_path = os.path.join(TEMP_DIR, 'data', 'minecraft', 'loot_tables')
+def _load_table_info(mcrData: MCRData):
+    loot_table_path = os.path.join(
+        TEMP_DIR, 'data', 'minecraft', 'loot_tables')
 
     for dirpath, _, filenames in os.walk(loot_table_path):
         for filename in filenames:
@@ -76,7 +78,7 @@ def load_table_info(mcrData: MCRData):
             mcrData.remaining_selectors.append(selector)
 
 
-def randomize(mcrData: MCRData):
+def _randomize(mcrData: MCRData):
     for selector in mcrData.loot_table_maps:
 
         i = random.randrange(0, len(mcrData.remaining_selectors))
@@ -90,7 +92,7 @@ def randomize(mcrData: MCRData):
         del mcrData.remaining_selectors[i]
 
 
-def populate(mcrData: MCRData):
+def _populate(mcrData: MCRData):
     current_map: LootTableMap
     for selector in mcrData.loot_table_maps:
         populate_advancement_chain(selector, mcrData.loot_table_maps)
@@ -195,7 +197,7 @@ def generate_children_functions(mcrData: MCRData, pathed_selector: str, start_li
     search_queue = [start_link]
     reference_namespaced_selectors = {}
 
-    cur_link = AdvItem
+    cur_link: AdvItem
     current_map: LootTableMap
 
     is_reference = False
@@ -546,7 +548,7 @@ def get_parent_tab(loot_table_map: LootTableMap):
         return 'no_parent'
 
 
-def generate_advancements(mcrData: MCRData, loot_table_map: LootTableMap):
+def _generate_advancements(mcrData: MCRData, loot_table_map: LootTableMap):
     current_advs_and_recipes: list[Union[Advancement, Recipe]] = []
 
     parent = get_parent_tab(loot_table_map)
@@ -675,7 +677,7 @@ def GetZipBytes(mcrData: MCRData) -> io.BytesIO:
     return zipbytes
 
 
-def initializeFunctions(mcrData: MCRData):
+def _initialize_functions(mcrData: MCRData):
     (mcrData.functions['load']
         .execute().unless_score_matches(mcArgs.Entity('debug'), mcArgs.Objective('mcr_loaded'), 1).run(datapack_func('add', mcrData.datapack_name))
         .custom('scoreboard objectives add mcr_loaded dummy')
@@ -717,7 +719,7 @@ def initializeFunctions(mcrData: MCRData):
      )
 
 
-def finalizeAdvTabs(mcrData: MCRData):
+def _finalizeAdvTabs(mcrData: MCRData):
 
     page = 0
     for tab in mcrData.tabs:
@@ -739,7 +741,7 @@ def finalizeAdvTabs(mcrData: MCRData):
         tab_selector = get_pathed_selector(parent, '', '', -1)
 
         title = f'Randomizer Tab {page}'
-        adv_tab = AdvItem.populate(
+        adv_tab = AdvItem(
             parent, eAdvItemType.tab, mcrData.mcr_item, title, 'A Randomizer Tab')
 
         generate_single_advancement(mcrData, current_advs_and_recipes, adv_tab, tab_selector, None, hidden=False,
@@ -750,12 +752,10 @@ def finalizeAdvTabs(mcrData: MCRData):
             f'advancement grant @a from {mcrData.datapack_name}:{tab_selector}')
 
 
-def mc_randomizer(mcrData: MCRData, setProgress: Callable[[float, float], Any] = lambda *_: None, finishedCallback: Optional[Callable[..., Any]] = None, ):
-
-    totalSteps: float = 9
+def mc_randomizer(mcrData: MCRData, finishedCallback: Optional[Callable[..., Any]] = None, ):
 
     mcrData.printStep('Initializing Pack...')
-    initializePackInformation(mcrData)
+    _initializePackInformation(mcrData)
 
     if mcrData.seed_generated:
         print('If you want to use a specific randomizer seed, include a seed in the list of arguments. ex: "python mc_randomize.py 12345" or "python mc_randomize.py seed=12345".')
@@ -765,38 +765,30 @@ def mc_randomizer(mcrData: MCRData, setProgress: Callable[[float, float], Any] =
 
     print(f'flags: {mcrData.flags}')
 
-    setProgress(1, totalSteps)
     mcrData.printStep('Loading Tables...')
-    load_table_info(mcrData)
+    _load_table_info(mcrData)
 
-    setProgress(2, totalSteps)
     mcrData.printStep('Randomizing drops...')
-    randomize(mcrData)
+    _randomize(mcrData)
 
-    setProgress(3, totalSteps)
     mcrData.printStep('Validating loot tables...')
     for selector in mcrData.loot_table_maps:
         validate_conditions(mcrData.loot_table_maps[selector])
 
-    setProgress(4, totalSteps)
     mcrData.printStep('Populating Advancement chains...')
-    populate(mcrData)
+    _populate(mcrData)
 
-    setProgress(5, totalSteps)
     mcrData.printStep('Initialize MCFunctions...')
-    initializeFunctions(mcrData)
+    _initialize_functions(mcrData)
 
-    setProgress(6, totalSteps)
     mcrData.printStep('Generating Advancements...')
     for loot_table_map in mcrData.loot_table_maps.values():
         if not loot_table_map.is_sub:
-            generate_advancements(mcrData, loot_table_map)
+            _generate_advancements(mcrData, loot_table_map)
 
-    setProgress(7, totalSteps)
     mcrData.printStep('Finalizing Advancement Tabs...')
-    finalizeAdvTabs(mcrData)
+    _finalizeAdvTabs(mcrData)
 
-    setProgress(8, totalSteps)
     mcrData.printStep('Writing Files...')
     zipbytes = GetZipBytes(mcrData)
     files = [('Compressed (zipped) Folders', '*.zip')]
@@ -808,6 +800,5 @@ def mc_randomizer(mcrData: MCRData, setProgress: Callable[[float, float], Any] =
     mcrData.printStep(f'Created datapack "{mcrData.datapack_filename}".')
     mcrData.printDetail('The program can now be closed.')
 
-    setProgress(9, totalSteps)
     if finishedCallback is not None:
         finishedCallback()

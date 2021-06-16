@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Callable, Union
+from typing import Any, Callable, Optional, Union
 
 from mcr.flags import MCRFlags
 from mcr.loot_table_map import LootTableMap
@@ -9,7 +9,7 @@ from mcr.mc.data_structures.recipe import CraftingShaped, Recipe
 
 
 class MCRData():
-    printStep: Callable[[str], Any]
+    printStep: Callable[..., Any]
     printDetail: Callable[[str], Any]
 
     flags: MCRFlags

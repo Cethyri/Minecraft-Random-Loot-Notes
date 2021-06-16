@@ -5,7 +5,7 @@ import threading
 import tkinter as tk
 from tkinter import filedialog
 import tkinter.ttk as ttk
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 import zipfile
 
 from idlelib.tooltip import Hovertip # type: ignore
@@ -30,7 +30,8 @@ class Progress(tk.Toplevel):
         self.title('MCR Generation')
         self.iconphoto(False, tk.PhotoImage(file='Icon.png'))
 
-        self.p_generation = ttk.Progressbar(self, length=250)
+        self.p_generation = ttk.Progressbar(
+            self, length=250, value=0, maximum=methods.TOTAL_STEPS)
         self.p_generation.pack(padx=10, pady=10)
 
         self.stepVar = tk.StringVar(value='Loading...')
@@ -41,9 +42,12 @@ class Progress(tk.Toplevel):
         self.l_generationDetail = ttk.Label(self, textvariable=self.detailVar)
         self.l_generationDetail.pack()
 
-        mcrData.printStep = self.stepVar.set
+        mcrData.printStep = self.step
         mcrData.printDetail = self.detailVar.set
 
+    def step(self, step: str, amount: Optional[int] = None):
+        self.p_generation.step(amount)
+        self.stepVar.set(step)
 
 class FlagsFrame(ttk.Labelframe):
     cb_flags: dict[str, ttk.Checkbutton]
@@ -188,12 +192,8 @@ class Input(ttk.Frame):
 
         self.tl_progress = Progress(self.mcrData)
 
-        def setProgress(value: float, maximum: float):
-            self.tl_progress.p_generation.configure(
-                value=value, maximum=maximum)
-
         def start():
-            methods.mc_randomizer(self.mcrData, setProgress)
+            methods.mc_randomizer(self.mcrData)
 
         threading.Thread(target=start).start()
 
