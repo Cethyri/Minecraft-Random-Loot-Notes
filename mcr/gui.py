@@ -1,17 +1,16 @@
-import io
 import os
 import re
 import threading
 import tkinter as tk
-from tkinter import Misc, Widget, filedialog
 import tkinter.ttk as ttk
-from typing import Any, Callable, IO, Optional
 import zipfile
+from tkinter import filedialog
+from typing import Any, Callable, Optional
 
 from idlelib.tooltip import Hovertip  # type: ignore
 
-from mcr.mcr_data import MCRData
 import mcr.methods as methods
+from mcr.mcr_data import MCRData
 
 
 class Progress(tk.Toplevel):
@@ -226,7 +225,7 @@ class Input(ttk.Frame):
 
     def _pickJar(self):
 
-        self.tl_progress.step('Selecting Minecraft Jar File', 1)
+        self.tl_progress.step('Selecting Minecraft Jar File', 0)
 
         if not os.path.exists(methods.TEMP_DIR):
             os.makedirs(methods.TEMP_DIR)

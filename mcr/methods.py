@@ -438,7 +438,6 @@ def generate_conditions(mcr_data: MCRData, pathed_name: str, adv_link: AdvItem, 
                                                                        objective, '1..').at('@s').run(named_function)
 
         parent_name = get_upper_name(adv_link.name)
-        # TODO figure what went wrong here?
         mcr_data.advancements[pathed_name].display.description = f'{parent_name} Loot Table Reference'
 
         execute_conditions_list = [
@@ -739,7 +738,6 @@ def finalizeAdvTabs(mcr_data: MCRData):
 
         for stuff in current_advs_and_recipes:
             if isinstance(stuff, Advancement):
-                # TODO another instance of what the heck happened is this datatype a union like Int range?
                 stuff.display.description = f'On Randomizer Tab {page}'
                 stuff.parent = parent
             elif isinstance(stuff, CraftingShaped):
@@ -761,7 +759,7 @@ def finalizeAdvTabs(mcr_data: MCRData):
 
 def mc_randomizer(mcr_data: MCRData, finishedCallback: Optional[Callable[..., Any]] = None, ):
 
-    mcr_data.printStep('Initializing Pack...')
+    mcr_data.printStep('Initializing Pack...', 0)
     initialize_pack_info(mcr_data)
 
     if mcr_data.seed_generated:
@@ -805,7 +803,7 @@ def mc_randomizer(mcr_data: MCRData, finishedCallback: Optional[Callable[..., An
         file.write(zipbytes.getvalue())
         file.close()
 
-    mcr_data.printStep(f'Created datapack "{mcr_data.datapack_filename}".', 0)
+    mcr_data.printStep(f'Created datapack "{mcr_data.datapack_filename}".')
     mcr_data.printDetail('The program can now be closed.')
 
     if finishedCallback is not None:
