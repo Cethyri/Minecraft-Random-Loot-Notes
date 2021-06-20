@@ -2,13 +2,13 @@ from typing import Union
 
 from mcr.json_dict import JsonDict
 
-from mcr.mc.data_structures.range import FloatRange, init_float_or_range
+from mcr.mc.data_structures.range import FloatRange
 
 
-class Position(JsonDict, overrides={'x': init_float_or_range, 'y': init_float_or_range, 'z': init_float_or_range}):
-    x: Union[FloatRange, float]
-    y: Union[FloatRange, float]
-    z: Union[FloatRange, float]
+class Position(JsonDict):
+    x: Union[float, FloatRange]
+    y: Union[float, FloatRange]
+    z: Union[float, FloatRange]
 
 
 class Distance(JsonDict):

@@ -2,7 +2,7 @@ from typing import Any, Optional, Union
 from enum import Enum
 
 from mcr.json_dict import JsonDict, SpecialInit
-from mcr.mc.data_structures.range import IntRange, init_int_or_range
+from mcr.mc.data_structures.range import IntRange
 
 from mcr.mc.data_structures.location import eDimension
 from mcr.mc.data_structures.entity import Entity
@@ -171,8 +171,8 @@ class BrewedPotion(TriggerConditions):
     potion: str
 
 
-class ChangedDimension(TriggerConditions, overrides={'frm': 'from'}):
-    frm:	eDimension
+class ChangedDimension(TriggerConditions, overrides={'from_': 'from'}):
+    from_:	eDimension
     to:		eDimension
 
 
@@ -180,8 +180,8 @@ class ChanneledLightning(TriggerConditions):
     victims: Entity
 
 
-class ConstructBeacon(TriggerConditions, overrides={'level': init_int_or_range}):
-    level: Union[IntRange, int]
+class ConstructBeacon(TriggerConditions):
+    level: Union[int, IntRange]
 
 
 class ConsumeItem(TriggerConditions):

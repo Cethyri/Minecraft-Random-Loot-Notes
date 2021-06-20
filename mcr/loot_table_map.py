@@ -29,16 +29,16 @@ class eAdvItemType(Enum):
 
 
 class AdvItem(JsonDict):
-    selector:		str
-    item_selector:	str
+    name:		str
+    item_name:	str
     adv_item_type:	eAdvItemType
     title:			Optional[str]
     description:	Optional[str]
 
-    def __init__(self, selector: str, adv_item_type: eAdvItemType, item_selector: Optional[str] = None, title: Optional[str] = None, description: Optional[str] = None):
-        self.selector = selector
+    def __init__(self, name: str, adv_item_type: eAdvItemType, item_name: Optional[str] = None, title: Optional[str] = None, description: Optional[str] = None):
+        self.name = name
         self.adv_item_type = adv_item_type
-        self.item_selector = selector if item_selector is None else item_selector
+        self.item_name = name if item_name is None else item_name
         self.title = title
         self.description = description
 
@@ -49,26 +49,23 @@ class AdvItem(JsonDict):
 
 class LootTableMap():
     remapped:       LootTable
-    remap_selector: str
+    remap_name: str
     adv_chain:      list[AdvItem]
     adv_branches:   dict[str, list[AdvItem]]
     branch_map:     dict[str, int]
 
-    selector: str
+    name: str
     path: list[str]
     original: LootTable
-    is_loop: bool
-    is_sub: bool
-    adv_length: float
+    
+    is_loop: bool = False
+    is_sub: bool = False
+    adv_length: float = 0
 
-    def __init__(self, selector: str, path: list[str], loot_table: LootTable):
-        self.selector = selector
+    def __init__(self, name: str, path: list[str], loot_table: LootTable):
+        self.name = name
         self.path = path
         self.original = loot_table
-
-        self.is_loop = False
-        self.is_sub = False
-        self.adv_length = 0
 
     @property
     def file_path(self) -> str:

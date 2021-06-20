@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 
-from mcr.json_dict import JsonDict
+from mcr.json_dict import JsonDict, UnionInit
 
 
 class Icon(JsonDict):
@@ -16,7 +16,7 @@ class Icon(JsonDict):
         return icon
 
 
-class TextComponent(JsonDict):
+class TextComponent(JsonDict, UnionInit):
     text: str
 
     @staticmethod
@@ -25,6 +25,13 @@ class TextComponent(JsonDict):
         tc.text = text
 
         return tc
+
+    @staticmethod
+    def create(value: Union[dict[str, str], str]):
+        if isinstance(value, str):
+            return TextComponent.populate(value)
+        
+        return TextComponent(value)
 
 
 class eFrame(str, Enum):
@@ -35,10 +42,10 @@ class eFrame(str, Enum):
 
 class Display(JsonDict):
     icon:				Icon
-    title:				TextComponent
+    title:				Union[str, TextComponent]
     frame:				eFrame
     background:			str
-    description:		TextComponent
+    description:		Union[str, TextComponent]
     show_toast:			bool
     announce_to_chat:	bool
     hidden:				bool

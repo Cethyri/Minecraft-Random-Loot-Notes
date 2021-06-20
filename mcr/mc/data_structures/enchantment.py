@@ -1,7 +1,7 @@
 from typing import Union
 
 from mcr.json_dict import JsonDict
-from mcr.mc.data_structures.range import IntRange, init_int_or_range
+from mcr.mc.data_structures.range import IntRange
 
 
 class eEnchantment(JsonDict):
@@ -44,6 +44,6 @@ class eEnchantment(JsonDict):
     vanishing_curse = 'minecraft:vanishing_curse'
 
 
-class Enchantment(JsonDict, overrides={'levels': init_int_or_range}):
+class Enchantment(JsonDict):
     enchantment:	eEnchantment
-    levels:			Union[IntRange, int]
+    levels:			Union[int, IntRange]

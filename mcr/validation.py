@@ -1,7 +1,7 @@
 import random
 from typing import Any
 
-from loot_table_map import LootTableMap
+from mcr.loot_table_map import LootTableMap
 from mcr.interactable import ActionInfo, ActionResult, eActionType
 from mcr.mc.data_structures.condition import Condition, eCondition
 from mcr.restriction import eRestriction, get_restriction_level
@@ -46,7 +46,7 @@ def validate(condition: Condition, loot_table_map: LootTableMap, condition_maps:
         restricted = not loot_table_map.remapped.type_ == loot_table_map.original.type_
 
     elif restriction_level is eRestriction.table_specific:
-        restricted = not loot_table_map.selector == loot_table_map.remap_selector
+        restricted = not loot_table_map.name == loot_table_map.remap_name
 
     elif restriction_level is eRestriction.dont_validate:
         restricted = False

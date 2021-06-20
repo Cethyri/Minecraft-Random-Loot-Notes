@@ -13,6 +13,11 @@ class SpecialInit(ABC):
     def create(value: Any) -> Any:
         pass
 
+class UnionInit(ABC):
+    @abstractstaticmethod
+    def create(value: Any) -> Any:
+        pass
+
 
 class JsonDict(dict[str, Any]):
     overrides: dict[str, Union[str, callOrCast, Tuple[str, callOrCast]]] = {}
@@ -31,7 +36,7 @@ class JsonDict(dict[str, Any]):
 
             key: str = name
             init: callOrCast = baseOrOrigin(type_)
-            args: Tuple[Any, ...] = get_args(type_)
+            args: Tuple[type, ...] = get_args(type_)
             json_property: Callable[[str, callOrCast], property] = json_basic
 
             if name in cls.overrides:
@@ -50,9 +55,13 @@ class JsonDict(dict[str, Any]):
                 elif init is dict and len(args) >= 2:
                     json_property = json_dict
                     init = baseOrOrigin(get_args(type_)[1])
-                # elif init is Union and len(args) >= 1:
-                #     json_property = json_union
-                #     init =
+                elif init is Union and len(args) >= 1:
+                    json_property = json_basic
+
+                    for arg in args:
+                        if issubclass(arg, UnionInit):
+                            init = arg.create
+                            break
 
                 if isinstance(init, type) and issubclass(init, SpecialInit):
                     init = init.create

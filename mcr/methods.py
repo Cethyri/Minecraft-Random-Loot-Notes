@@ -6,10 +6,10 @@ import random
 import zipfile
 from dataclasses import dataclass
 from tkinter.filedialog import asksaveasfile
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, IO, Optional, Union
 
 import mcr.mc.commands.argument_types as mcArgs
-from mcr.helpers.regex import get_upper_selector, shorten_selector
+from mcr.helpers.regex import get_upper_name, shorten_name
 from mcr.loot_table_map import AdvItem, LootTableMap, eAdvItemType
 from mcr.mc.commands.execute import Execute
 from mcr.mc.commands.function import Function
@@ -31,76 +31,76 @@ from mcr.validation import validate_conditions
 TEMP_DIR = 'mc_temp_dir'
 TOTAL_STEPS = 10
 
+def initialize_pack_info(mcr_data: MCRData):
+    mcr_data.datapack_filename = mcr_data.datapack_name
 
-def _initializePackInformation(mcrData: MCRData):
-    mcrData.datapack_filename = mcrData.datapack_name
+    if not mcr_data.flags.hide_seed:
+        mcr_data.datapack_filename += f'(seed={mcr_data.seed})'
 
-    if not mcrData.flags.hide_seed:
-        mcrData.datapack_filename += f'(seed={mcrData.seed})'
+    random.seed(mcr_data.seed)
+    mcr_data.datapack_desc = f'Minecraft Randomizer, Seed: {mcr_data.seed}'
 
-    random.seed(mcrData.seed)
-    mcrData.datapack_desc = f'Minecraft Randomizer, Seed: {mcrData.seed}'
-
-    mcrData.notesGrantSelector = '@s'
-    if mcrData.flags.co_op:
-        mcrData.notesGrantSelector = '@a'
+    mcr_data.notesGrantSelector = '@s'
+    if mcr_data.flags.co_op:
+        mcr_data.notesGrantSelector = '@a'
 
     with open('mcr/mc/data/requires_cheats.json') as json_file:
-        mcrData.requires_cheats = json.load(json_file)
+        mcr_data.requires_cheats = json.load(json_file)
 
     with open('mcr/mc/data/double_tall_blocks.json') as json_file:
-        mcrData.double_tall_blocks = json.load(json_file)
+        mcr_data.double_tall_blocks = json.load(json_file)
 
 
-def _load_table_info(mcrData: MCRData):
+def load_table_info(mcr_data: MCRData):
     loot_table_path = os.path.join(
-        TEMP_DIR, 'data', 'minecraft', 'loot_tables')
+        TEMP_DIR, mcr_data.jarname, 'data', 'minecraft', 'loot_tables')
 
     for dirpath, _, filenames in os.walk(loot_table_path):
         for filename in filenames:
-            selector = filename.replace('.json', '')
+            table_name = filename.replace('.json', '')
             path = dirpath.replace(loot_table_path + '\\', '').split('\\')
 
-            if selector == 'player' and mcrData.flags.hardcore:
+            if table_name == 'player' and mcr_data.flags.hardcore:
                 continue
 
-            if selector in mcrData.requires_cheats and mcrData.flags.no_cheats:
+            if table_name in mcr_data.requires_cheats and mcr_data.flags.no_cheats:
                 continue
 
             with open(os.path.join(dirpath, filename)) as json_file:
                 json_text = json_file.read().replace('\n', '')
-                mcrData.original_to_selector[json_text] = selector
                 loot_table = LootTable(json.loads(json_text))
 
-            if ('pools' not in loot_table or len(loot_table.pools) == 0) and mcrData.flags.no_dead_ends:
+            if ('pools' not in loot_table or len(loot_table.pools) == 0) and mcr_data.flags.no_dead_ends:
                 continue
 
-            mcrData.loot_table_maps[selector] = LootTableMap(
-                selector, path, loot_table)
-            mcrData.remaining_selectors.append(selector)
+            mcr_data.original_to_table_name[json_text] = table_name
+
+            mcr_data.loot_table_maps[table_name] = LootTableMap(
+                table_name, path, loot_table)
+            mcr_data.remaining_table_names.append(table_name)
 
 
-def _randomize(mcrData: MCRData):
-    for selector in mcrData.loot_table_maps:
+def randomize(mcr_data: MCRData):
+    for loot_table_map in mcr_data.loot_table_maps.values():
 
-        i = random.randrange(0, len(mcrData.remaining_selectors))
+        i = random.randrange(0, len(mcr_data.remaining_table_names))
 
-        remapped_table = mcrData.loot_table_maps[mcrData.remaining_selectors[i]].original
-        mcrData.loot_table_maps[selector].remap_selector = mcrData.remaining_selectors[i]
+        remapped_table = mcr_data.loot_table_maps[mcr_data.remaining_table_names[i]].original
+        loot_table_map.remap_name = mcr_data.remaining_table_names[i]
 
-        mcrData.loot_table_maps[selector].remapped = LootTable(
+        loot_table_map.remapped = LootTable(
             json.loads(json.dumps(remapped_table)))  # Deep Copy
 
-        del mcrData.remaining_selectors[i]
+        del mcr_data.remaining_table_names[i]
 
 
-def _populate(mcrData: MCRData):
+def populate(mcr_data: MCRData):
     current_map: LootTableMap
-    for selector in mcrData.loot_table_maps:
-        populate_advancement_chain(selector, mcrData.loot_table_maps)
-        for adv_item in mcrData.loot_table_maps[selector].adv_chain:
-            current_map = mcrData.loot_table_maps[adv_item.selector]
-            if not adv_item.selector == selector:
+    for name, loot_table_map in mcr_data.loot_table_maps.items():
+        populate_advancement_chain(name, mcr_data.loot_table_maps)
+        for adv_item in loot_table_map.adv_chain:
+            current_map = mcr_data.loot_table_maps[adv_item.name]
+            if not adv_item.name == name:
                 current_map.is_sub = not current_map.is_loop
 
 
@@ -112,12 +112,12 @@ def datapack_func(funcName: str, datapack_name: str):
     return Function(namespaced_func(funcName, datapack_name))
 
 
-def get_minecraft_selector(selector: str):
-    return f'minecraft:{selector}'
+def get_minecraft_id(name: str):
+    return f'minecraft:{name}'
 
 
-def get_namespaced_selector(datapack_name: str, pathed_selector: str, additional: Optional[str] = None):
-    return f'{datapack_name}:{pathed_selector}{additional if additional is not None else ""}'
+def get_namespaced_id(datapack_name: str, pathed_name: str, additional: Optional[str] = None):
+    return f'{datapack_name}:{pathed_name}{additional if additional is not None else ""}'
 
 
 sheep_color_to_number: dict[str, int] = {
@@ -140,25 +140,25 @@ sheep_color_to_number: dict[str, int] = {
 }
 
 
-def get_pathed_selector(selector: str, path: str, base: str, link_index: int):
-    name = f'{link_index}-{selector}' if link_index >= 0 else selector
+def get_pathed_name(name: str, path: str, base: str, link_index: int):
+    name = f'{link_index}-{name}' if link_index >= 0 else name
     return os.path.join(path, base, name).replace('\\', '/')
 
 
 @dataclass
 class RecipeInfo:
-    pathed_selector: str
-    parent_item_selector: str
+    pathed_name: str
+    parent_item_name: str
     parent_item_is_correct: bool
-    child_item_selector: str
+    child_item_name: str
     child_item_is_correct: bool
-    group_selector: str
+    group_name: str
 
 
 def generate_recipe(rInfo: RecipeInfo):
     recipe = CraftingShaped()
     recipe.type_ = eRecipe.crafting_shaped
-    recipe.group = f'rl_notes_{rInfo.group_selector}'
+    recipe.group = f'rl_notes_{rInfo.group_name}'
     recipe.pattern = [
         f'{" " if rInfo.parent_item_is_correct and rInfo.child_item_is_correct else "B"}I',
         'PK'
@@ -167,9 +167,9 @@ def generate_recipe(rInfo: RecipeInfo):
     knowledge_book = Ingredient()
     knowledge_book.item = 'minecraft:knowledge_book'
     parent = Ingredient()
-    parent.item = rInfo.parent_item_selector
+    parent.item = rInfo.parent_item_name
     child = Ingredient()
-    child.item = rInfo.child_item_selector
+    child.item = rInfo.child_item_name
     barrier = Ingredient()
     barrier.item = 'minecraft:barrier'
 
@@ -184,20 +184,20 @@ def generate_recipe(rInfo: RecipeInfo):
 
     recipe.result = Result()
     recipe.result.count = 1
-    recipe.result.item = rInfo.child_item_selector
+    recipe.result.item = rInfo.child_item_name
 
     return recipe
 
 
-def generate_children_functions(mcrData: MCRData, pathed_selector: str, start_link: AdvItem, path: str, base: str, child_index: int, execute_conditions_list: list[Callable[..., Any]]):
-    mcrData.functions[pathed_selector].append(
+def generate_children_functions(mcr_data: MCRData, pathed_name: str, start_link: AdvItem, path: str, base: str, child_index: int, execute_conditions_list: list[Callable[..., Any]]):
+    mcr_data.functions[pathed_name].append(
         'scoreboard players set @s mcr_incomplete 0')
-    mcrData.functions[pathed_selector].append(
+    mcr_data.functions[pathed_name].append(
         'scoreboard players set @s mcr_complete 0')
 
     references: list[str] = []
     search_queue = [start_link]
-    reference_namespaced_selectors = {}
+    reference_namespaced_ids = {}
 
     cur_link: AdvItem
     current_map: LootTableMap
@@ -206,77 +206,77 @@ def generate_children_functions(mcrData: MCRData, pathed_selector: str, start_li
 
     while len(search_queue) > 0:
         cur_link = search_queue.pop()
-        current_map = mcrData.loot_table_maps[cur_link.selector]
+        current_map = mcr_data.loot_table_maps[cur_link.name]
 
         if is_reference:
-            mcrData.functions[pathed_selector].append(
+            mcr_data.functions[pathed_name].append(
                 'scoreboard players set @s mcr_ref_complete 0')
 
-        references.append(current_map.selector)
+        references.append(current_map.name)
 
         branches: list[AdvItem] = []
-        if cur_link.selector in current_map.adv_branches:
-            branches.extend(current_map.adv_branches[cur_link.selector])
+        if cur_link.name in current_map.adv_branches:
+            branches.extend(current_map.adv_branches[cur_link.name])
         if len(current_map.adv_chain) > 1 and current_map.adv_chain[1].adv_item_type is not eAdvItemType.from_items:
             branches.append(current_map.adv_chain[1])
 
         for adv_child in branches:
-            child_pathed_selector = get_pathed_selector(
-                adv_child.selector, path, base, 1 if is_reference else child_index)
+            child_pathed_name = get_pathed_name(
+                adv_child.name, path, base, 1 if is_reference else child_index)
 
-            namespaced_selector = get_namespaced_selector(
-                mcrData.datapack_name, child_pathed_selector)
-            if adv_child.adv_item_type is not eAdvItemType.reference and adv_child.selector == adv_child.item_selector:
+            namespaced_id = get_namespaced_id(
+                mcr_data.datapack_name, child_pathed_name)
+            if adv_child.adv_item_type is not eAdvItemType.reference and adv_child.name == adv_child.item_name:
                 for execute_conditions in execute_conditions_list:
-                    mcrData.functions[pathed_selector].execute(f'execute {execute_conditions(adv_child)}').run(
-                        f'advancement grant @s only {namespaced_selector}')
-                (mcrData.functions[pathed_selector]
-                    .custom(f'recipe give @s[advancements = {{ {namespaced_selector} = true }}] {namespaced_selector}')
-                    .custom(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = true }}] mcr_complete 1')
-                    .custom(f'scoreboard players add @s[advancements = {{ {namespaced_selector} = false }}] mcr_incomplete 1')
+                    mcr_data.functions[pathed_name].execute(f'execute {execute_conditions(adv_child)}').run(
+                        f'advancement grant @s only {namespaced_id}')
+                (mcr_data.functions[pathed_name]
+                    .custom(f'recipe give @s[advancements = {{ {namespaced_id} = true }}] {namespaced_id}')
+                    .custom(f'scoreboard players add @s[advancements = {{ {namespaced_id} = true }}] mcr_complete 1')
+                    .custom(f'scoreboard players add @s[advancements = {{ {namespaced_id} = false }}] mcr_incomplete 1')
                  )
 
                 if is_reference:
-                    mcrData.functions[pathed_selector].custom(
-                        f'scoreboard players add @s[advancements = {{ {namespaced_selector} = true }}] mcr_ref_complete 1')
+                    mcr_data.functions[pathed_name].custom(
+                        f'scoreboard players add @s[advancements = {{ {namespaced_id} = true }}] mcr_ref_complete 1')
 
-            elif adv_child.adv_item_type is eAdvItemType.reference and adv_child.selector not in references:
+            elif adv_child.adv_item_type is eAdvItemType.reference and adv_child.name not in references:
                 search_queue.append(adv_child)
-                reference_namespaced_selectors[adv_child.selector] = namespaced_selector
+                reference_namespaced_ids[adv_child.name] = namespaced_id
 
         if is_reference:
-            root_namespaced_selector = get_namespaced_selector(
-                mcrData.datapack_name, get_pathed_selector(cur_link.selector, path, base, 0))
-            (mcrData.functions[pathed_selector]
-                .custom(f'advancement grant @s[scores = {{ mcr_ref_complete = 1.. }}] only {reference_namespaced_selectors[cur_link.selector]}')
-                .custom(f'advancement grant @s[scores = {{ mcr_ref_complete = 1.. }}] only {root_namespaced_selector}')
+            root_namespaced_id = get_namespaced_id(
+                mcr_data.datapack_name, get_pathed_name(cur_link.name, path, base, 0))
+            (mcr_data.functions[pathed_name]
+                .custom(f'advancement grant @s[scores = {{ mcr_ref_complete = 1.. }}] only {reference_namespaced_ids[cur_link.name]}')
+                .custom(f'advancement grant @s[scores = {{ mcr_ref_complete = 1.. }}] only {root_namespaced_id}')
              )
         else:
             is_reference = True
 
 
-def generate_conditions(mcrData: MCRData, pathed_selector: str, adv_link: AdvItem, path: str, base: str, link_index: int, objective_num: int) -> int:
+def generate_conditions(mcr_data: MCRData, pathed_name: str, adv_link: AdvItem, path: str, base: str, link_index: int, objective_num: int) -> int:
 
-    if pathed_selector in mcrData.functions:
-        mcrData.printDetail('Warning: duplicate function!')
+    if pathed_name in mcr_data.functions:
+        mcr_data.printDetail('Warning: duplicate function!')
 
-    loot_table_map = mcrData.loot_table_maps[adv_link.selector]
+    loot_table_map = mcr_data.loot_table_maps[adv_link.name]
 
-    helper_selector = f'helper/{pathed_selector}'
-    namespaced_helper = get_namespaced_selector(
-        mcrData.datapack_name, helper_selector)
-    namespaced_selector = get_namespaced_selector(
-        mcrData.datapack_name, pathed_selector)
-    selector_function = Function(mcArgs.NamespacedId(namespaced_selector))
+    helper_name = f'helper/{pathed_name}'
+    namespaced_helper = get_namespaced_id(
+        mcr_data.datapack_name, helper_name)
+    namespaced_id = get_namespaced_id(
+        mcr_data.datapack_name, pathed_name)
+    named_function = Function(mcArgs.NamespacedId(namespaced_id))
 
-    adv_selector_id = mcArgs.NamespacedId(adv_link.selector)
+    adv_namespaced_id = mcArgs.NamespacedId(adv_link.name)
 
-    mcrData.functions[pathed_selector] = MCFunction()
+    mcr_data.functions[pathed_name] = MCFunction()
 
-    objective_name = f'{shorten_selector(adv_link.selector)}_r{objective_num}'
+    objective_name = f'{shorten_name(adv_link.name)}_r{objective_num}'
     objective = mcArgs.Objective(objective_name)
     if len(objective_name) > 16:
-        mcrData.printDetail(objective_name)
+        mcr_data.printDetail(objective_name)
     objective_num += 1
     objective_criteria = 'dummy'
     use_helper = False
@@ -286,15 +286,15 @@ def generate_conditions(mcrData: MCRData, pathed_selector: str, adv_link: AdvIte
     child_index = link_index + 1
 
     def get_item_entity(adv_child: AdvItem, distance: Union[int, float]):
-        return mcArgs.Entity('@e', distance=f'..{distance}', type='minecraft:item', limit=1, nbt=NBT({'Age': Tag_Short(0), 'Item': {'id': f'minecraft:{adv_child.item_selector}'}}))
+        return mcArgs.Entity('@e', distance=f'..{distance}', type='minecraft:item', limit=1, nbt=NBT({'Age': Tag_Short(0), 'Item': {'id': f'minecraft:{adv_child.item_name}'}}))
 
-    if adv_link.selector == 'sheep' or 'fishing' in loot_table_map.path:
+    if adv_link.name == 'sheep' or 'fishing' in loot_table_map.path:
         return objective_num
 
-    elif adv_link.selector == 'armor_stand':
+    elif adv_link.name == 'armor_stand':
         # TODO check if get_item_entity needs 'armor_stand' explicitly
-        mcrData.functions['tick'].execute().as_('@a').if_score_matches('@s', objective,
-                                                                       '..0').at('@s').at(get_item_entity(adv_link, 8)).run(selector_function)
+        mcr_data.functions['tick'].execute().as_('@a').if_score_matches('@s', objective,
+                                                                       '..0').at('@s').at(get_item_entity(adv_link, 8)).run(named_function)
 
         execute_conditions_list = [
             lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child, 2))
@@ -302,29 +302,29 @@ def generate_conditions(mcrData: MCRData, pathed_selector: str, adv_link: AdvIte
 
         grant_target_selector = ''
 
-    elif adv_link.selector in mcrData.double_tall_blocks:
+    elif adv_link.name in mcr_data.double_tall_blocks:
         for i in range(10):
             score = i + 1
             distance = score / 2
             pos = mcArgs.Vec3(z=distance, rel='^')
-            (mcrData.functions['tick']
-                .execute().as_('@a').if_score_matches('@s', objective, '0').at('@s').anchored('eyes').if_block(pos, adv_selector_id).run(f'scoreboard players set @s {objective} {score}')
-                .execute().as_('@a').if_score_matches('@s', objective, score).at('@s').anchored('eyes').unless_block(pos, adv_selector_id).positioned(pos).run(selector_function)
+            (mcr_data.functions['tick']
+                .execute().as_('@a').if_score_matches('@s', objective, '0').at('@s').anchored('eyes').if_block(pos, adv_namespaced_id).run(f'scoreboard players set @s {objective} {score}')
+                .execute().as_('@a').if_score_matches('@s', objective, score).at('@s').anchored('eyes').unless_block(pos, adv_namespaced_id).positioned(pos).run(named_function)
              )
 
         execute_conditions_list = [
             lambda adv_child: Execute.conditions().unless_block(
-                mcArgs.Vec3().loc, adv_selector_id).if_entity(get_item_entity(adv_child, 2))
+                mcArgs.Vec3().loc, adv_namespaced_id).if_entity(get_item_entity(adv_child, 2))
         ]
 
         reset_objective = True
         grant_target_selector = ''
 
     elif loot_table_map.original.type_ is eLootTable.block:
-        objective_criteria = f'minecraft.mined:minecraft.{adv_link.selector}'
+        objective_criteria = f'minecraft.mined:minecraft.{adv_link.name}'
 
-        mcrData.functions['tick'].execute().as_('@a').if_score_matches('@s',
-                                                                       objective, '1..').at('@s').run(selector_function)
+        mcr_data.functions['tick'].execute().as_('@a').if_score_matches('@s',
+                                                                       objective, '1..').at('@s').run(named_function)
 
         execute_conditions_list = [
             lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child, 8))
@@ -334,83 +334,83 @@ def generate_conditions(mcrData: MCRData, pathed_selector: str, adv_link: AdvIte
         grant_target_selector = ''
 
     elif loot_table_map.original.type_ is eLootTable.chest:
-        loot_table_pathed_selector = get_pathed_selector(
-            adv_link.selector, path, '', -1)
+        loot_table_pathed_name = get_pathed_name(
+            adv_link.name, path, '', -1)
 
         for i in range(10):
             score = i + 1
             distance = score / 2
             pos = mcArgs.Vec3(z=distance, rel='^')
             block = mcArgs.NamespacedId(
-                f'chest{{ LootTable: "minecraft:{loot_table_pathed_selector}" }}')
-            (mcrData.functions['tick']
+                f'chest{{ LootTable: "minecraft:{loot_table_pathed_name}" }}')
+            (mcr_data.functions['tick']
                 .execute().as_('@a').if_score_matches('@s', objective, 0).at('@s').anchored('eyes').if_block(pos, block).run(f'scoreboard players set @s {objective} {score}')
-                .execute().as_('@a').if_score_matches('@s', objective, score).at('@s').anchored('eyes').unless_block(pos, block).positioned(pos).run(selector_function)
+                .execute().as_('@a').if_score_matches('@s', objective, score).at('@s').anchored('eyes').unless_block(pos, block).positioned(pos).run(named_function)
              )
 
         execute_conditions_list = [
             lambda adv_child: Execute.conditions().if_block(mcArgs.Vec3().rel(), mcArgs.NamespacedId(
-                f'chest{{ Items: [{{ id: "minecraft:{adv_child.item_selector}" }}] }}'))
+                f'chest{{ Items: [{{ id: "minecraft:{adv_child.item_name}" }}] }}'))
         ]
 
         reset_objective = True
 
     elif loot_table_map.original.type_ is eLootTable.gift and 'hero_of_the_village' in loot_table_map.path:
-        villager_type = adv_link.selector.replace('_gift', '')
+        villager_type = adv_link.name.replace('_gift', '')
 
         as_selector = mcArgs.Entity(
             '@a', nbt=NBT({'ActiveEffects': [{'Id': Tag_Byte(32)}]}))
         at_selector = mcArgs.Entity('@e', distance='..8', type='minecraft:villager', nbt=NBT(
             {'VillagerData': {'profession': f'minecraft:{villager_type}'}}))
 
-        mcrData.functions['tick'].execute().as_(as_selector).if_score_matches(
-            '@s', objective, '0..').at('@s').at(at_selector).run(selector_function)
+        mcr_data.functions['tick'].execute().as_(as_selector).if_score_matches(
+            '@s', objective, '0..').at('@s').at(at_selector).run(named_function)
 
         execute_conditions_list = [
             lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child, 2))
         ]
 
-    elif adv_link.selector == 'cat_morning_gift':
+    elif adv_link.name == 'cat_morning_gift':
         sleeptimerCheck = NBTPath({'SleepTimer': Tag_Short(101)})
 
-        mcrData.functions['tick'].execute().as_('@a').if_data_entity('@s', sleeptimerCheck).at('@s').at(
-            mcArgs.Entity('@e', distance='..16', type='minecraft:cat')).run(selector_function)
+        mcr_data.functions['tick'].execute().as_('@a').if_data_entity('@s', sleeptimerCheck).at('@s').at(
+            mcArgs.Entity('@e', distance='..16', type='minecraft:cat')).run(named_function)
 
         execute_conditions_list = [
             lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child, 4)),
             lambda adv_child: Execute.conditions().as_(mcArgs.Entity(
-                '@s', nbt=NBT({'Inventory': [{'id': f'minecraft:{adv_child.item_selector}'}]})))
+                '@s', nbt=NBT({'Inventory': [{'id': f'minecraft:{adv_child.item_name}'}]})))
         ]
 
     elif loot_table_map.original.type_ is eLootTable.entity:
         use_helper = True
 
-        if adv_link.selector == 'player':
+        if adv_link.name == 'player':
             conditions = EntityKilledPlayer()
             killed_trigger_type = eTrigger.entity_killed_player
         else:
             conditions = PlayerKilledEntity()
             conditions.entity = Entity()
-            if 'sheep' in mcrData.loot_table_maps[adv_link.selector].path:
+            if 'sheep' in mcr_data.loot_table_maps[adv_link.name].path:
                 conditions.entity.type_ = 'minecraft:sheep'
-                conditions.entity['Color'] = sheep_color_to_number[adv_link.selector]
+                conditions.entity['Color'] = sheep_color_to_number[adv_link.name]
             else:
-                conditions.entity.type_ = get_minecraft_selector(
-                    adv_link.selector)
+                conditions.entity.type_ = get_minecraft_id(
+                    adv_link.name)
             killed_trigger_type = eTrigger.player_killed_entity
 
-        mcrData.advancements[helper_selector] = Advancement()
-        mcrData.advancements[helper_selector].criteria = {
+        mcr_data.advancements[helper_name] = Advancement()
+        mcr_data.advancements[helper_name].criteria = {
             'kill': Criteria.populate(killed_trigger_type, conditions)
         }
 
-        mcrData.advancements[helper_selector].rewards = Rewards()
-        mcrData.advancements[helper_selector].rewards.function = namespaced_helper
-        mcrData.functions[helper_selector].custom(
+        mcr_data.advancements[helper_name].rewards = Rewards()
+        mcr_data.advancements[helper_name].rewards.function = namespaced_helper
+        mcr_data.functions[helper_name].custom(
             f'scoreboard players set @a {objective} 1')
 
-        mcrData.functions['tick'].execute().as_('@a').if_score_matches('@s',
-                                                                       objective, '1..').at('@s').run(selector_function)
+        mcr_data.functions['tick'].execute().as_('@a').if_score_matches('@s',
+                                                                       objective, '1..').at('@s').run(named_function)
 
         execute_conditions_list = [
             lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child, 64))
@@ -419,27 +419,27 @@ def generate_conditions(mcrData: MCRData, pathed_selector: str, adv_link: AdvIte
         reset_objective = True
         grant_target_selector = ''
 
-    elif adv_link.selector == 'fishing':
+    elif adv_link.name == 'fishing':
         use_helper = True
 
         conditions = FishingRodHooked()
 
-        mcrData.advancements[helper_selector] = Advancement()
-        mcrData.advancements[helper_selector].criteria = {
+        mcr_data.advancements[helper_name] = Advancement()
+        mcr_data.advancements[helper_name].criteria = {
             'fish': Criteria.populate(eTrigger.fishing_rod_hooked, conditions)
         }
 
-        mcrData.advancements[helper_selector].rewards = Rewards()
-        mcrData.advancements[helper_selector].rewards.function = namespaced_helper
-        mcrData.functions[helper_selector].custom(
+        mcr_data.advancements[helper_name].rewards = Rewards()
+        mcr_data.advancements[helper_name].rewards.function = namespaced_helper
+        mcr_data.functions[helper_name].custom(
             f'scoreboard players set @a {objective} 1')
 
-        mcrData.functions['tick'].execute().as_('@a').if_score_matches('@s',
-                                                                       objective, '1..').at('@s').run(selector_function)
+        mcr_data.functions['tick'].execute().as_('@a').if_score_matches('@s',
+                                                                       objective, '1..').at('@s').run(named_function)
 
-        parent_name = get_upper_selector(adv_link.selector)
+        parent_name = get_upper_name(adv_link.name)
         # TODO figure what went wrong here?
-        mcrData.advancements[pathed_selector].display.description = f'{parent_name} Loot Table Reference'
+        mcr_data.advancements[pathed_name].display.description = f'{parent_name} Loot Table Reference'
 
         execute_conditions_list = [
             lambda adv_child: Execute.conditions().if_entity(get_item_entity(adv_child, 64))
@@ -455,57 +455,57 @@ def generate_conditions(mcrData: MCRData, pathed_selector: str, adv_link: AdvIte
         raise Exception(f'No Problem!\r\n{adv_link}\r\nDidn\'t Work!')
 
     generate_children_functions(
-        mcrData, pathed_selector, adv_link, path, base, child_index, execute_conditions_list)
+        mcr_data, pathed_name, adv_link, path, base, child_index, execute_conditions_list)
 
-    mcrData.functions['reset'].append(
+    mcr_data.functions['reset'].append(
         f'scoreboard objectives add {objective} {objective_criteria}')
-    mcrData.functions['setup'].append(
+    mcr_data.functions['setup'].append(
         f'scoreboard players set @s {objective} 0')
-    mcrData.functions['remove'].append(
+    mcr_data.functions['remove'].append(
         f'scoreboard objectives remove {objective}')
 
     if reset_objective:
-        mcrData.functions[pathed_selector].append(
+        mcr_data.functions[pathed_name].append(
             f'scoreboard players set @s {objective} 0')
     if use_helper:
-        mcrData.functions[pathed_selector].append(
+        mcr_data.functions[pathed_name].append(
             f'advancement revoke @s[scores = {{ mcr_incomplete = 1.. }}] only {namespaced_helper}')
 
-    (mcrData.functions[pathed_selector]
-        .custom(f'advancement grant @s{grant_target_selector} only {namespaced_selector}')
+    (mcr_data.functions[pathed_name]
+        .custom(f'advancement grant @s{grant_target_selector} only {namespaced_id}')
         .custom(f'scoreboard players reset @s[scores = {{ mcr_incomplete = 0 }}] {objective}')
      )
 
     show_debug = mcArgs.Objective('show debug')
 
-    (mcrData.functions[pathed_selector]
-        .execute().if_score_matches('@s', show_debug, 1).run(f'tell @s @s triggered {namespaced_selector} : obj {objective}')
+    (mcr_data.functions[pathed_name]
+        .execute().if_score_matches('@s', show_debug, 1).run(f'tell @s @s triggered {namespaced_id} : obj {objective}')
         .execute().if_score_matches('@s', show_debug, 1).run('tellraw @s [{ "text": "complete:"}, { "score": { "name": "@s", "objective": "mcr_complete" } }, { "text": ", mcr_incomplete:" },{ "score": { "name": "@s", "objective": "incomplete" } }]')
      )
 
     return objective_num
 
 
-def generate_single_advancement(mcrData: MCRData, current_advs_and_recipes: list[Union[Advancement, Recipe]], adv_link: AdvItem, pathed_selector: str, namespaced_parent_selector: Optional[str] = None, parent_item_selector: Optional[str] = None, parent_item_is_correct: bool = False, hidden: bool = True, gen_base_criteria: bool = True, show: bool = True, announce: bool = True):
-    selector = adv_link.selector
-    cap_name = get_upper_selector(selector)
-    item_selector = get_minecraft_selector(adv_link.item_selector)
+def generate_single_advancement(mcr_data: MCRData, current_advs_and_recipes: list[Union[Advancement, Recipe]], adv_link: AdvItem, pathed_name: str, parent_namespaced_id: Optional[str] = None, parent_item_name: Optional[str] = None, parent_item_is_correct: bool = False, hidden: bool = True, gen_base_criteria: bool = True, show: bool = True, announce: bool = True):
+    name = adv_link.name
+    cap_name = get_upper_name(name)
+    item_id = get_minecraft_id(adv_link.item_name)
 
-    if parent_item_selector is not None:
-        recipe = generate_recipe(RecipeInfo(pathed_selector, parent_item_selector, parent_item_is_correct,
-                                            item_selector, adv_link.selector == adv_link.item_selector, adv_link.selector))
+    if parent_item_name is not None:
+        recipe = generate_recipe(RecipeInfo(pathed_name, parent_item_name, parent_item_is_correct,
+                                            item_id, adv_link.name == adv_link.item_name, adv_link.name))
 
-        mcrData.recipes[pathed_selector] = recipe
+        mcr_data.recipes[pathed_name] = recipe
         current_advs_and_recipes.append(recipe)
 
     advancement = Advancement()
     if adv_link.adv_item_type is eAdvItemType.root or adv_link.adv_item_type is eAdvItemType.root_table:
         advancement.rewards = Rewards()
         advancement.rewards.recipes = [
-            get_namespaced_selector(mcrData.datapack_name, pathed_selector)]
+            get_namespaced_id(mcr_data.datapack_name, pathed_name)]
 
     advancement.display = Display.populate(
-        icon=item_selector,
+        icon=item_id,
         title=adv_link.title if adv_link.title is not None else cap_name,
         description='No Description',
         frame=adv_link.frame,
@@ -514,15 +514,15 @@ def generate_single_advancement(mcrData: MCRData, current_advs_and_recipes: list
         hidden=hidden
     )
 
-    if namespaced_parent_selector is not None:
-        advancement.parent = namespaced_parent_selector
+    if parent_namespaced_id is not None:
+        advancement.parent = parent_namespaced_id
     else:
         advancement.display.background = 'minecraft:textures/block/dirt.png'
 
     if gen_base_criteria:
         advancement.criteria = {'get': Criteria.populate(eTrigger.impossible)}
 
-    mcrData.advancements[pathed_selector] = advancement
+    mcr_data.advancements[pathed_name] = advancement
     current_advs_and_recipes.append(advancement)
 
 
@@ -537,7 +537,7 @@ def get_parent_tab(loot_table_map: LootTableMap):
         else:
             return 'chests'
     elif loot_table_map.original.type_ is eLootTable.entity:
-        if 'sheep' in loot_table_map.path or loot_table_map.selector == 'sheep':
+        if 'sheep' in loot_table_map.path or loot_table_map.name == 'sheep':
             return 'sheep'
         else:
             return 'entities'
@@ -553,21 +553,21 @@ def get_parent_tab(loot_table_map: LootTableMap):
         return 'no_parent'
 
 
-def _generate_advancements(mcrData: MCRData, loot_table_map: LootTableMap):
+def generate_advancements(mcr_data: MCRData, loot_table_map: LootTableMap):
     current_advs_and_recipes: list[Union[Advancement, Recipe]] = []
 
     parent = get_parent_tab(loot_table_map)
-    pathed_parent = get_namespaced_selector(mcrData.datapack_name, parent)
-    parent_selector = parent
-    parent_item_selector = get_minecraft_selector(mcrData.mcr_item)
+    pathed_parent = get_namespaced_id(mcr_data.datapack_name, parent)
+    parent_name = parent
+    parent_item_id = get_minecraft_id(mcr_data.mcr_item)
     parent_item_is_correct = False
 
-    base = loot_table_map.selector
+    base = loot_table_map.name
     path = loot_table_map.file_path
 
-    first_path = get_pathed_selector(
-        loot_table_map.selector, path, base, 0)
-    pathed_selector = first_path
+    first_path = get_pathed_name(
+        loot_table_map.name, path, base, 0)
+    pathed_name = first_path
 
     from_items_length = 0
     child_pathed_parent = None
@@ -586,20 +586,20 @@ def _generate_advancements(mcrData: MCRData, loot_table_map: LootTableMap):
             from_items_length = 0
             pathed_parent = child_pathed_parent
 
-        pathed_selector = get_pathed_selector(
-            adv_link.selector, path, base, link_index)
-        generate_single_advancement(mcrData, current_advs_and_recipes, adv_link,
-                                    pathed_selector, pathed_parent, parent_item_selector, parent_item_is_correct)
+        pathed_name = get_pathed_name(
+            adv_link.name, path, base, link_index)
+        generate_single_advancement(mcr_data, current_advs_and_recipes, adv_link,
+                                    pathed_name, pathed_parent, parent_item_id, parent_item_is_correct)
 
-        parent_selector = adv_link.selector
-        parent_item_selector = f'minecraft:{adv_link.item_selector}'
-        parent_item_is_correct = adv_link.item_selector == adv_link.selector
-        pathed_parent = get_namespaced_selector(
-            mcrData.datapack_name, pathed_selector)
+        parent_name = adv_link.name
+        parent_item_id = f'minecraft:{adv_link.item_name}'
+        parent_item_is_correct = adv_link.item_name == adv_link.name
+        pathed_parent = get_namespaced_id(
+            mcr_data.datapack_name, pathed_name)
 
-        if parent_selector in loot_table_map.adv_branches:
+        if parent_name in loot_table_map.adv_branches:
             child_pathed_parent = pathed_parent
-            branch = loot_table_map.adv_branches[parent_selector]
+            branch = loot_table_map.adv_branches[parent_name]
             split = False
             branch_length = len(branch)
             if link_index == len(loot_table_map.adv_chain) - 1:
@@ -609,12 +609,12 @@ def _generate_advancements(mcrData: MCRData, loot_table_map: LootTableMap):
                     loot_table_map.adv_length += branch_length
 
             for adv_child in branch:
-                child_pathed_selector = get_pathed_selector(
-                    adv_child.selector, path, base, link_index + 1)
-                generate_single_advancement(mcrData, current_advs_and_recipes, adv_child, child_pathed_selector,
-                                            child_pathed_parent, parent_item_selector, parent_item_is_correct)
-                child_pathed_parent = get_namespaced_selector(
-                    mcrData.datapack_name, child_pathed_selector)
+                child_pathed_name = get_pathed_name(
+                    adv_child.name, path, base, link_index + 1)
+                generate_single_advancement(mcr_data, current_advs_and_recipes, adv_child, child_pathed_name,
+                                            child_pathed_parent, parent_item_id, parent_item_is_correct)
+                child_pathed_parent = get_namespaced_id(
+                    mcr_data.datapack_name, child_pathed_name)
                 from_items_length += 1
                 if split:
                     column += 1
@@ -624,7 +624,7 @@ def _generate_advancements(mcrData: MCRData, loot_table_map: LootTableMap):
                         column = 0
 
         current_obj_num = generate_conditions(
-            mcrData, pathed_selector, adv_link, path, base, link_index, current_obj_num)
+            mcr_data, pathed_name, adv_link, path, base, link_index, current_obj_num)
 
     tab_name = parent
     if parent != 'fishing':
@@ -637,45 +637,45 @@ def _generate_advancements(mcrData: MCRData, loot_table_map: LootTableMap):
         elif loot_table_map.adv_length >= 24 and parent == 'entities':
             tab_name = f'{parent}_long'
 
-        mcrData.advancements[first_path].parent = get_namespaced_selector(
-            mcrData.datapack_name, tab_name)
+        mcr_data.advancements[first_path].parent = get_namespaced_id(
+            mcr_data.datapack_name, tab_name)
 
-    if tab_name not in mcrData.tabs:
-        mcrData.tabs.append(tab_name)
+    if tab_name not in mcr_data.tabs:
+        mcr_data.tabs.append(tab_name)
 
-    if tab_name not in mcrData.tabbed_advs_and_recipes:
-        mcrData.tabbed_advs_and_recipes[tab_name] = []
-    mcrData.tabbed_advs_and_recipes[tab_name].extend(current_advs_and_recipes)
+    if tab_name not in mcr_data.tabbed_advs_and_recipes:
+        mcr_data.tabbed_advs_and_recipes[tab_name] = []
+    mcr_data.tabbed_advs_and_recipes[tab_name].extend(current_advs_and_recipes)
 
 
-def GetZipBytes(mcrData: MCRData) -> io.BytesIO:
+def GetZipBytes(mcr_data: MCRData) -> io.BytesIO:
 
     zipbytes = io.BytesIO()
     zip_ = zipfile.ZipFile(zipbytes, 'w', zipfile.ZIP_DEFLATED, False)
 
-    for file_name, loot_table_map in mcrData.loot_table_maps.items():
+    for file_name, loot_table_map in mcr_data.loot_table_maps.items():
         zip_.writestr(os.path.join('data', 'minecraft', 'loot_tables',
                                    loot_table_map.file_path, f'{file_name}.json'), json.dumps(loot_table_map.remapped))
 
-    for full_path, advancement in mcrData.advancements.items():
+    for full_path, advancement in mcr_data.advancements.items():
         zip_.writestr(os.path.join(
-            'data', mcrData.datapack_name, 'advancements', f'{full_path}.json'), json.dumps(advancement))
+            'data', mcr_data.datapack_name, 'advancements', f'{full_path}.json'), json.dumps(advancement))
 
-    for full_path, function_list in mcrData.functions.items():
+    for full_path, function_list in mcr_data.functions.items():
         zip_.writestr(os.path.join(
-            'data', mcrData.datapack_name, 'functions', f'{full_path}.mcfunction'), '\n'.join(str(function_list)))
+            'data', mcr_data.datapack_name, 'functions', f'{full_path}.mcfunction'), '\n'.join(str(function_list)))
 
-    for full_path, recipe in mcrData.recipes.items():
+    for full_path, recipe in mcr_data.recipes.items():
         zip_.writestr(os.path.join(
-            'data', mcrData.datapack_name, 'recipes', f'{full_path}.json'), json.dumps(recipe))
+            'data', mcr_data.datapack_name, 'recipes', f'{full_path}.json'), json.dumps(recipe))
 
     zip_.writestr('data/minecraft/tags/functions/load.json',
-                  json.dumps({'values': [f'{mcrData.datapack_name}:load']}))
+                  json.dumps({'values': [f'{mcr_data.datapack_name}:load']}))
     zip_.writestr('data/minecraft/tags/functions/tick.json',
-                  json.dumps({'values': [f'{mcrData.datapack_name}:tick']}))
+                  json.dumps({'values': [f'{mcr_data.datapack_name}:tick']}))
 
     zip_.writestr('pack.mcmeta', json.dumps(
-        {'pack': {'pack_format': 7, 'description': mcrData.datapack_desc}}, indent=4))
+        {'pack': {'pack_format': 7, 'description': mcr_data.datapack_desc}}, indent=4))
 
     zip_.write('Icon.png', 'pack.png')
 
@@ -684,58 +684,58 @@ def GetZipBytes(mcrData: MCRData) -> io.BytesIO:
     return zipbytes
 
 
-def _initialize_functions(mcrData: MCRData):
-    (mcrData.functions['load']
-        .execute().unless_score_matches(mcArgs.Entity('debug'), mcArgs.Objective('mcr_loaded'), 1).run(datapack_func('add', mcrData.datapack_name))
+def initialize_functions(mcr_data: MCRData):
+    (mcr_data.functions['load']
+        .execute().unless_score_matches(mcArgs.Entity('debug'), mcArgs.Objective('mcr_loaded'), 1).run(datapack_func('add', mcr_data.datapack_name))
         .custom('scoreboard objectives add mcr_loaded dummy')
         .custom('scoreboard players set debug mcr_loaded 1')
         .custom('scoreboard objectives add show_debug trigger ["",{"text":"Debug"}]')
         .custom('tellraw @a ["",{"text":"Loot table randomizer with notes, by Cethyrion, adapted from SethBling\'s Loot table randomizer","color":"green"}]')
      )
-    (mcrData.functions['add']
+    (mcr_data.functions['add']
         .custom('scoreboard objectives add mcr_setup dummy')
         .custom('scoreboard objectives add mcr_complete dummy')
         .custom('scoreboard objectives add mcr_incomplete dummy')
         .custom('scoreboard objectives add mcr_ref_complete dummy')
      )
-    (mcrData.functions['tick']
-        .execute().as_('@a').unless_score_matches('@a', mcArgs.Objective('mcr_setup'), 1).run(datapack_func('setup', mcrData.datapack_name))
+    (mcr_data.functions['tick']
+        .execute().as_('@a').unless_score_matches('@a', mcArgs.Objective('mcr_setup'), 1).run(datapack_func('setup', mcr_data.datapack_name))
      )
-    (mcrData.functions['setup']
+    (mcr_data.functions['setup']
         .custom('scoreboard players set @s mcr_setup 1')
         .custom('tellraw @s ["",{"selector":"say mcr_setup @s\'s MCRandomizer","color":"green"}]')
      )
-    (mcrData.functions['debug']
-        .function(namespaced_func('reset', mcrData.datapack_name))
+    (mcr_data.functions['debug']
+        .function(namespaced_func('reset', mcr_data.datapack_name))
      )
-    (mcrData.functions['reset']
+    (mcr_data.functions['reset']
         .custom('scoreboard players set debug mcr_loaded 0')
-        .function(namespaced_func('remove', mcrData.datapack_name))
-        .function(namespaced_func('load', mcrData.datapack_name))
+        .function(namespaced_func('remove', mcr_data.datapack_name))
+        .function(namespaced_func('load', mcr_data.datapack_name))
      )
-    (mcrData.functions['remove']
+    (mcr_data.functions['remove']
         .custom('scoreboard objectives remove mcr_setup')
         .custom('scoreboard objectives remove mcr_complete')
         .custom('scoreboard objectives remove mcr_incomplete')
         .custom('scoreboard objectives remove mcr_ref_complete')
      )
-    (mcrData.functions['uninstall']
-        .function(namespaced_func('remove', mcrData.datapack_name))
+    (mcr_data.functions['uninstall']
+        .function(namespaced_func('remove', mcr_data.datapack_name))
         .custom('scoreboard objectives remove mcr_loaded')
         .custom('scoreboard objectives remove show_debug')
      )
 
 
-def _finalizeAdvTabs(mcrData: MCRData):
+def finalizeAdvTabs(mcr_data: MCRData):
 
     page = 0
-    for tab in mcrData.tabs:
+    for tab in mcr_data.tabs:
         page += 1
 
         parent = f'mcr_tab_{page}'
 
         current_advs_and_recipes: list[Union[Advancement,
-                                             Recipe]] = mcrData.tabbed_advs_and_recipes[tab]
+                                             Recipe]] = mcr_data.tabbed_advs_and_recipes[tab]
 
         for stuff in current_advs_and_recipes:
             if isinstance(stuff, Advancement):
@@ -745,67 +745,68 @@ def _finalizeAdvTabs(mcrData: MCRData):
             elif isinstance(stuff, CraftingShaped):
                 stuff.result.count = page
 
-        tab_selector = get_pathed_selector(parent, '', '', -1)
+        tab_name = get_pathed_name(parent, '', '', -1)
 
         title = f'Randomizer Tab {page}'
         adv_tab = AdvItem(
-            parent, eAdvItemType.tab, mcrData.mcr_item, title, 'A Randomizer Tab')
+            parent, eAdvItemType.tab, mcr_data.mcr_item, title, 'A Randomizer Tab')
 
-        generate_single_advancement(mcrData, current_advs_and_recipes, adv_tab, tab_selector, None, hidden=False,
+        generate_single_advancement(mcr_data, current_advs_and_recipes, adv_tab, tab_name, None, hidden=False,
                                     gen_base_criteria=False, show=False, announce=False)
-        mcrData.advancements[tab_selector].criteria = {
+        mcr_data.advancements[tab_name].criteria = {
             'take_notes': Criteria.populate(eTrigger.impossible)}
-        mcrData.functions['debug'].append(
-            f'advancement grant @a from {mcrData.datapack_name}:{tab_selector}')
+        mcr_data.functions['debug'].append(
+            f'advancement grant @a from {mcr_data.datapack_name}:{tab_name}')
 
 
-def mc_randomizer(mcrData: MCRData, finishedCallback: Optional[Callable[..., Any]] = None, ):
+def mc_randomizer(mcr_data: MCRData, finishedCallback: Optional[Callable[..., Any]] = None, ):
 
-    mcrData.printStep('Initializing Pack...')
-    _initializePackInformation(mcrData)
+    mcr_data.printStep('Initializing Pack...')
+    initialize_pack_info(mcr_data)
 
-    if mcrData.seed_generated:
+    if mcr_data.seed_generated:
         print('If you want to use a specific randomizer seed, include a seed in the list of arguments. ex: "python mc_randomize.py 12345" or "python mc_randomize.py seed=12345".')
 
-        if not any(mcrData.flags):
+        if not any(mcr_data.flags):
             print('Customization is available through flags. If you would like to see a list of flags use: "python mc_randomizer.py -help"')
 
-    print(f'flags: {mcrData.flags}')
+    print(f'flags: {mcr_data.flags}')
 
-    mcrData.printStep('Loading Tables...')
-    _load_table_info(mcrData)
+    mcr_data.printStep('Loading Tables...')
+    load_table_info(mcr_data)
 
-    mcrData.printStep('Randomizing drops...')
-    _randomize(mcrData)
+    mcr_data.printStep('Randomizing drops...')
+    randomize(mcr_data)
 
-    mcrData.printStep('Validating loot tables...')
-    for selector in mcrData.loot_table_maps:
-        validate_conditions(mcrData.loot_table_maps[selector])
+    mcr_data.printStep('Validating loot tables...')
+    for loot_table_map in mcr_data.loot_table_maps.values():
+        validate_conditions(loot_table_map)
 
-    mcrData.printStep('Populating Advancement chains...')
-    _populate(mcrData)
+    mcr_data.printStep('Populating Advancement chains...')
+    populate(mcr_data)
 
-    mcrData.printStep('Initialize MCFunctions...')
-    _initialize_functions(mcrData)
+    mcr_data.printStep('Initialize MCFunctions...')
+    initialize_functions(mcr_data)
 
-    mcrData.printStep('Generating Advancements...')
-    for loot_table_map in mcrData.loot_table_maps.values():
+    mcr_data.printStep('Generating Advancements...')
+    for loot_table_map in mcr_data.loot_table_maps.values():
         if not loot_table_map.is_sub:
-            _generate_advancements(mcrData, loot_table_map)
+            generate_advancements(mcr_data, loot_table_map)
 
-    mcrData.printStep('Finalizing Advancement Tabs...')
-    _finalizeAdvTabs(mcrData)
+    mcr_data.printStep('Finalizing Advancement Tabs...')
+    finalizeAdvTabs(mcr_data)
 
-    mcrData.printStep('Writing Files...')
-    zipbytes = GetZipBytes(mcrData)
+    mcr_data.printStep('Writing Files...')
+    zipbytes = GetZipBytes(mcr_data)
     files = [('Compressed (zipped) Folders', '*.zip')]
 
-    file: io.BufferedWriter
-    with asksaveasfile(mode='wb', filetypes=files, defaultextension='.zip', initialfile=mcrData.datapack_filename) as file:
+    file: Optional[IO[Any]] = asksaveasfile(mode='wb', filetypes=files, defaultextension='.zip', initialfile=mcr_data.datapack_filename)
+    if file:
         file.write(zipbytes.getvalue())
+        file.close()
 
-    mcrData.printStep(f'Created datapack "{mcrData.datapack_filename}".', 0)
-    mcrData.printDetail('The program can now be closed.')
+    mcr_data.printStep(f'Created datapack "{mcr_data.datapack_filename}".', 0)
+    mcr_data.printDetail('The program can now be closed.')
 
     if finishedCallback is not None:
         finishedCallback()

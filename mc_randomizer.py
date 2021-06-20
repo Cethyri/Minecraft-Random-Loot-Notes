@@ -22,7 +22,7 @@ seed_generated = flags_info_and_seed[2] is None
 
 datapack_name = 'mc_randomizer'
 
-mcrData: MCRData = MCRData(flags, flagInfo,
+mcr_data: MCRData = MCRData(flags, flagInfo,
                            seed, seed_generated, datapack_name)
 
-start_app(mcrData)
+start_app(mcr_data)

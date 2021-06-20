@@ -12,6 +12,8 @@ class MCRData():
     printStep: Callable[..., Any]
     printDetail: Callable[[str], Any]
 
+    jarname: str
+
     flags: MCRFlags
     flagInfo: dict[str, dict[str, str]]
 
@@ -29,9 +31,9 @@ class MCRData():
     double_tall_blocks: list[str]
 
     loot_table_maps: dict[str, LootTableMap] = {}
-    remaining_selectors: list[str] = []
+    remaining_table_names: list[str] = []
 
-    original_to_selector: dict[str, str] = {}
+    original_to_table_name: dict[str, str] = {}
 
     tabs: list[str] = []
     advancements: dict[str, Advancement] = {}
