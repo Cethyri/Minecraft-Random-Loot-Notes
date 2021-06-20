@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Union
 
 from mcr.flags import MCRFlags
 from mcr.loot_table_map import LootTableMap
@@ -19,6 +19,7 @@ class MCRData():
     seed_generated: bool
 
     datapack_name: str
+    datapack_filename: str
 
     datapack_desc: str
 
@@ -41,10 +42,6 @@ class MCRData():
     recipes: dict[str, CraftingShaped] = {}
 
     functions: defaultdict[str, MCFunction] = defaultdict(MCFunction)
-
-    @property
-    def datapack_filename(self) -> str:
-        return f'{self.datapack_name}.zip'
 
     def __init__(self, flags: MCRFlags, flagInfo: dict[str, dict[str, str]], seed: str, seed_generated: bool, datapack_name: str):
         self.printStep = print

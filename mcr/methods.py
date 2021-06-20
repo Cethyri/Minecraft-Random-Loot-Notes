@@ -10,9 +10,7 @@ from typing import Any, Callable, Optional, Union
 
 import mcr.mc.commands.argument_types as mcArgs
 from mcr.helpers.regex import get_upper_selector, shorten_selector
-from mcr.loot_table_map import (AdvItem, LootTableMap, eAdvItemType,
-                                populate_advancement_chain,
-                                validate_conditions)
+from mcr.loot_table_map import AdvItem, LootTableMap, eAdvItemType
 from mcr.mc.commands.execute import Execute
 from mcr.mc.commands.function import Function
 from mcr.mc.commands.mcfunction import MCFunction
@@ -27,17 +25,21 @@ from mcr.mc.data_structures.nbt import NBT, NBTPath, Tag_Byte, Tag_Short
 from mcr.mc.data_structures.recipe import (CraftingShaped, Ingredient, Recipe,
                                            Result, eRecipe)
 from mcr.mcr_data import MCRData
+from mcr.populate_advancement_chain import populate_advancement_chain
+from mcr.validation import validate_conditions
 
 TEMP_DIR = 'mc_temp_dir'
-TOTAL_STEPS = 9
+TOTAL_STEPS = 10
 
 
 def _initializePackInformation(mcrData: MCRData):
+    mcrData.datapack_filename = mcrData.datapack_name
+
     if not mcrData.flags.hide_seed:
-        mcrData.datapack_name += f'(seed={mcrData.seed})'
+        mcrData.datapack_filename += f'(seed={mcrData.seed})'
 
     random.seed(mcrData.seed)
-    mcrData.datapack_desc = f'Minecraft Randomizer, Seed: "{mcrData.seed}"'
+    mcrData.datapack_desc = f'Minecraft Randomizer, Seed: {mcrData.seed}'
 
     mcrData.notesGrantSelector = '@s'
     if mcrData.flags.co_op:
@@ -446,6 +448,9 @@ def generate_conditions(mcrData: MCRData, pathed_selector: str, adv_link: AdvIte
         reset_objective = True
         grant_target_selector = ''
 
+    elif loot_table_map.original.type_ is eLootTable.barter:
+        execute_conditions_list = []
+
     else:
         raise Exception(f'No Problem!\r\n{adv_link}\r\nDidn\'t Work!')
 
@@ -650,7 +655,7 @@ def GetZipBytes(mcrData: MCRData) -> io.BytesIO:
 
     for file_name, loot_table_map in mcrData.loot_table_maps.items():
         zip_.writestr(os.path.join('data', 'minecraft', 'loot_tables',
-                                   loot_table_map.file_path, f'{file_name}.json'), loot_table_map.contents)
+                                   loot_table_map.file_path, f'{file_name}.json'), json.dumps(loot_table_map.remapped))
 
     for full_path, advancement in mcrData.advancements.items():
         zip_.writestr(os.path.join(
@@ -658,19 +663,21 @@ def GetZipBytes(mcrData: MCRData) -> io.BytesIO:
 
     for full_path, function_list in mcrData.functions.items():
         zip_.writestr(os.path.join(
-            'data', mcrData.datapack_name, 'functions', f'{full_path}.mcfunction'), '\n'.join(function_list))
+            'data', mcrData.datapack_name, 'functions', f'{full_path}.mcfunction'), '\n'.join(str(function_list)))
 
     for full_path, recipe in mcrData.recipes.items():
         zip_.writestr(os.path.join(
             'data', mcrData.datapack_name, 'recipes', f'{full_path}.json'), json.dumps(recipe))
 
-    zip_.writestr('pack.mcmeta', json.dumps(
-        {'pack': {'pack_format': 1, 'description': mcrData.datapack_desc}}, indent=4))
-
     zip_.writestr('data/minecraft/tags/functions/load.json',
                   json.dumps({'values': [f'{mcrData.datapack_name}:load']}))
     zip_.writestr('data/minecraft/tags/functions/tick.json',
                   json.dumps({'values': [f'{mcrData.datapack_name}:tick']}))
+
+    zip_.writestr('pack.mcmeta', json.dumps(
+        {'pack': {'pack_format': 7, 'description': mcrData.datapack_desc}}, indent=4))
+
+    zip_.write('Icon.png', 'pack.png')
 
     zip_.close()
 
@@ -794,10 +801,10 @@ def mc_randomizer(mcrData: MCRData, finishedCallback: Optional[Callable[..., Any
     files = [('Compressed (zipped) Folders', '*.zip')]
 
     file: io.BufferedWriter
-    with asksaveasfile(mode='wb', filetypes=files, defaultextension='.zip', initialfile='a name') as file:
+    with asksaveasfile(mode='wb', filetypes=files, defaultextension='.zip', initialfile=mcrData.datapack_filename) as file:
         file.write(zipbytes.getvalue())
 
-    mcrData.printStep(f'Created datapack "{mcrData.datapack_filename}".')
+    mcrData.printStep(f'Created datapack "{mcrData.datapack_filename}".', 0)
     mcrData.printDetail('The program can now be closed.')
 
     if finishedCallback is not None:
