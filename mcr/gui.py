@@ -8,7 +8,7 @@ import tkinter.ttk as ttk
 from typing import Any, Callable, Optional
 import zipfile
 
-from idlelib.tooltip import Hovertip # type: ignore
+from idlelib.tooltip import Hovertip  # type: ignore
 
 from mcr.mcr_data import MCRData
 import mcr.methods as methods
@@ -49,6 +49,7 @@ class Progress(tk.Toplevel):
         self.p_generation.step(amount)
         self.stepVar.set(step)
 
+
 class FlagsFrame(ttk.Labelframe):
     cb_flags: dict[str, ttk.Checkbutton]
 
@@ -78,7 +79,8 @@ class FlagsFrame(ttk.Labelframe):
                 if 'hover' in mcrData.flagInfo[flag_name]:
                     Hovertip(rb, text=mcrData.flagInfo[flag_name]['hover'])
                 elif 'explanation' in mcrData.flagInfo[flag_name]:
-                    Hovertip(rb, text=mcrData.flagInfo[flag_name]['explanation'])
+                    Hovertip(
+                        rb, text=mcrData.flagInfo[flag_name]['explanation'])
 
     def disable(self):
         for flag_name in self.cb_flags:
@@ -188,23 +190,25 @@ class Input(ttk.Frame):
     def _submit(self):
         self._disableMainScreen()
 
-        self._pickJar()
-
         self.tl_progress = Progress(self.mcrData)
 
         def start():
+            self._pickJar()
+            self.tl_progress.focus()
             methods.mc_randomizer(self.mcrData)
 
         threading.Thread(target=start).start()
 
     def _pickJar(self):
+        
         if os.path.exists(methods.TEMP_DIR):
+            self.tl_progress.step('Deleting temp files', 0)
             for root, dirs, files in os.walk(methods.TEMP_DIR, topdown=False):
                 for name in files:
                     os.remove(os.path.join(root, name))
                 for name in dirs:
-                    os.removedirs(os.path.join(root, name))
-            os.removedirs(methods.TEMP_DIR)
+                    os.rmdir(os.path.join(root, name))
+            os.rmdir(methods.TEMP_DIR)
 
         os.makedirs(methods.TEMP_DIR)
 
@@ -212,6 +216,7 @@ class Input(ttk.Frame):
         appdata: str = os.getenv('APPDATA') or "%Appdata%"
         mc_path = os.path.join(appdata, '.minecraft', 'versions')
 
+        self.tl_progress.step('Selecting Minecraft Jar File', 1)
         jarpath: io.BufferedReader = filedialog.askopenfile(
             mode='r', filetypes=files, initialdir=mc_path)
 
