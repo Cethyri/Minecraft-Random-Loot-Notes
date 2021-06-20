@@ -36,6 +36,7 @@ class Tag():
 
 TAG = TypeVar('TAG', bound=Tag)
 
+
 class Tag_Compound(dict[str, Tag], Tag):
     def __init__(self, initialValue: dict[str, Tag_Compatible]):
         super().__init__()
@@ -57,10 +58,7 @@ class Tag_Int(int, Tag):
         cls.max_ = max_
         cls.postFix = postfix
 
-    def __new__(cls, value: Union[int, 'Tag_Int']):
-        if isinstance(value, Tag_Int):
-            return value
-
+    def __new__(cls, value: int):
         if cls.min_ <= value <= cls.max_:
             return super().__new__(cls, value)
         else:
@@ -79,12 +77,6 @@ class Tag_Float(float, Tag):
 
     def __init_subclass__(cls, postfix: str):
         cls.postFix = postfix
-
-    def __new__(cls, value: Union[float, 'Tag_Float']):
-        if isinstance(value, Tag_Float):
-            return value
-
-        return super().__new__(cls, value)
 
     def __str__(self) -> str:
         return f'{float(self)}{self.postFix}'
@@ -109,16 +101,16 @@ class Tag_Double(Tag_Float, postfix='d'):
 L = TypeVar('L', bound=Tag_Compatible)
 
 
-class Tag_Generic_List(Generic[TAG, L], list[TAG], Tag):
+class Tag_Generic_List(ABC, Generic[TAG, L], list[TAG], Tag):
     type_notifier: str = ''
-    index_initializer: Callable[[Union[TAG, L]], TAG]
+    index_initializer: Callable[[L], TAG]
 
-    def __init_subclass__(cls, index_initializer: Callable[[Union[TAG, L]], TAG], type_notifier: str = ''):
+    def __init_subclass__(cls, index_initializer: Callable[[L], TAG], type_notifier: str = ''):
         super().__init_subclass__()
         cls.type_notifier = type_notifier
         cls.index_initializer = index_initializer
 
-    def __init__(self, value: Union[list[TAG], list[L]]):
+    def __init__(self, value: list[L]):
         super().__init__(type(self).index_initializer(v) for v in value)
 
     def __str__(self) -> str:
