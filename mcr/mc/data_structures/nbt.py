@@ -156,7 +156,7 @@ NBT = Tag_Compound
 
 class Node(ABC):
     @property
-    def canBeSubListed(self) -> bool:
+    def canBeSublisted(self) -> bool:
         return False
 
 
@@ -205,7 +205,7 @@ class ElementOf(Node):
         return f'{NBT.safeTagName(self.name)}[{self.index}]'
 
     @property
-    def canBeSubListed(self) -> bool:
+    def canBeSublisted(self) -> bool:
         return True
 
 
@@ -219,7 +219,7 @@ class AllElementsOf(Node):
         return f'{NBT.safeTagName(self.name)}[]'
 
     @property
-    def canBeSubListed(self) -> bool:
+    def canBeSublisted(self) -> bool:
         return True
 
 
@@ -235,7 +235,7 @@ class CompoundElementsOf(Node):
         return f'{NBT.safeTagName(self.name)}[{self.tag}]'
 
 
-class ElementsOfSubList(Node):
+class ElementsOfSublist(Node):
     parent: Node
     index: Union[int, None, NBT]
 
@@ -247,7 +247,7 @@ class ElementsOfSubList(Node):
         return f'{self.parent}[{"" if self.index is None else self.index}]'
 
     @property
-    def canBeSubListed(self) -> bool:
+    def canBeSublisted(self) -> bool:
         return not isinstance(self.index, NBT)
 
 
@@ -311,8 +311,8 @@ class NBTPath():
 
             lastNode = self.__lastNode
 
-            if lastNode.canBeSubListed:
-                self.__path[~0] = ElementsOfSubList(lastNode, key)
+            if lastNode.canBeSublisted:
+                self.__path[~0] = ElementsOfSublist(lastNode, key)
             elif not isinstance(lastNode, Named):
                 # error? warn?
                 pass

@@ -1,4 +1,4 @@
-from typing import Any, Union, List
+from typing import Any, Optional, Union
 from enum import Enum
 
 from mcr.json_dict import JsonDict, SpecialInit
@@ -235,7 +235,7 @@ class Impossible(TriggerConditions):
 
 
 class InventoryChanged(TriggerConditions):
-    req_items:	List[Item]
+    req_items:	list[Item]
     slots:		dict
 
 # class ItemDurabilityChanged(TriggerConditions):
@@ -276,7 +276,7 @@ class Criteria(JsonDict, SpecialInit):
         return criteria
 
     @staticmethod
-    def populate(trigger_type: eTrigger, conditions: TriggerConditions = None):
+    def populate(trigger_type: eTrigger, conditions: Optional[TriggerConditions] = None):
         criteria = Criteria()
         criteria.trigger_type = trigger_type
         if conditions is not None:

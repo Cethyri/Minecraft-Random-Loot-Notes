@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import List, Dict, Union
+from typing import Union
 
 from mcr.json_dict import JsonDict
 
@@ -37,7 +37,7 @@ class Ingredient(JsonDict):
     tag:	str
 
 
-def init_ingredient_or_list(json_dict: Union[dict, List[dict]]):
+def init_ingredient_or_list(json_dict: Union[dict, list[dict]]):
     if isinstance(json_dict, dict):
         return Ingredient(json_dict)
     else:
@@ -53,6 +53,6 @@ class Recipe(JsonDict, overrides={'type_': 'type'}):
 
 
 class CraftingShaped(Recipe, overrides={'key': init_ingredient_or_list}):
-    pattern:	List[str]
-    key:		Dict[str, Union[Ingredient, List[Ingredient]]]
+    pattern:	list[str]
+    key:		dict[str, Union[Ingredient, list[Ingredient]]]
     result:		Result

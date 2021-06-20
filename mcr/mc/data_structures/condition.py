@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 from enum import Enum
 
 from mcr.json_dict import JsonDict, SpecialInit
@@ -95,7 +95,7 @@ class Condition(JsonDict, Interactable, SpecialInit):
 
 
 class Alternative(Condition):
-    terms: List[Condition]
+    terms: list[Condition]
 
 
 class BlockStateProperty(Condition):

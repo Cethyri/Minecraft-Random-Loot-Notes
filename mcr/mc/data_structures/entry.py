@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 from enum import Enum
 
 from mcr.json_dict import JsonDict, SpecialInit
@@ -25,7 +25,7 @@ class eDynamic(str, Enum):
 
 
 class Entry(JsonDict, Interactable, SpecialInit, overrides={'type_': 'type'}):
-    conditions:	List[Condition]
+    conditions:	list[Condition]
     type_:		eEntry
     weight:		int
     quality:	int
@@ -67,7 +67,7 @@ class Entry(JsonDict, Interactable, SpecialInit, overrides={'type_': 'type'}):
 
 class ItemEntry(Entry):
     name:		str
-    functions:	List[Function]
+    functions:	list[Function]
 
 
 class TagEntry(Entry):
@@ -80,15 +80,15 @@ class LootTableEntry(Entry):
 
 
 class GroupEntry(Entry):
-    children: List[Entry]
+    children: list[Entry]
 
 
 class AlternativesEntry(Entry):
-    children: List[Entry]
+    children: list[Entry]
 
 
 class SequenceEntry(Entry):
-    children: List[Entry]
+    children: list[Entry]
 
 
 class DynamicEntry(Entry):

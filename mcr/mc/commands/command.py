@@ -3,7 +3,7 @@ from typing import Generic, List, TypeVar
 
 
 class Command(ABC):
-    _command: List[str]
+    _command: list[str]
 
     def __init__(self, initialcommand: str):
         self._command = [initialcommand]
