@@ -597,6 +597,7 @@ def generate_conditions(
         f"scoreboard objectives add {objective} {objective_criteria}"
     )
     mcr_data.functions["setup"].append(f"scoreboard players set @s {objective} 0")
+    mcr_data.functions["add"].append(f"scoreboard objectives add {objective} {objective_criteria}")
     mcr_data.functions["remove"].append(f"scoreboard objectives remove {objective}")
 
     if reset_objective:
