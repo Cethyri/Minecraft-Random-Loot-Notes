@@ -1,5 +1,6 @@
 from enum import Enum
 from mcr.mc.data_structures.condition import Condition, eCondition
+from mcr.mc.data_structures.function import Function, eFunction
 
 class eRestriction(str, Enum):
     none = 0
@@ -8,59 +9,45 @@ class eRestriction(str, Enum):
     dont_validate = -1
     other = -2
 
+def get_restriction_level(restrictable: Condition | Function):
+    match restrictable:
+        case Condition():
+            get_restriction_level_condition(restrictable)
+        case Function():
+            get_restriction_level_function(restrictable)
 
-def get_restriction_level(condition: Condition):
+
+def get_restriction_level_condition(condition: Condition):
     restriction = eRestriction.other
 
-    if condition.condition == eCondition.alternative:
-        restriction = eRestriction.dont_validate
+    match condition.condition:
 
-    elif condition.condition == eCondition.block_state_property:
-        restriction = eRestriction.table_specific
+        case eCondition.location_check | eCondition.random_chance | eCondition.table_bonus:
+            restriction = eRestriction.none
 
-    elif condition.condition == eCondition.damage_source_properties:
-        restriction = eRestriction.type_specific
+        case eCondition.block_state_property:
+            restriction = eRestriction.table_specific
 
-    elif condition.condition == eCondition.entity_present:
-        pass
+        case eCondition.damage_source_properties | eCondition.entity_properties | eCondition.killed_by_player | eCondition.match_tool | eCondition.random_chance_with_looting | eCondition.survives_explosion | eCondition.tool_enchantment:
+            restriction = eRestriction.type_specific
 
-    elif condition.condition == eCondition.entity_properties:
-        restriction = eRestriction.type_specific
+        case eCondition.alternative | eCondition.entity_scores | eCondition.inverted:
+            restriction = eRestriction.dont_validate
 
-    elif condition.condition == eCondition.entity_scores:
-        restriction = eRestriction.dont_validate
+        case eCondition.weather_check | eCondition.reference | eCondition.entity_present:
+            pass
 
-    elif condition.condition == eCondition.inverted:
-        restriction = eRestriction.dont_validate
+    return restriction
 
-    elif condition.condition == eCondition.killed_by_player:
-        restriction = eRestriction.type_specific
+def get_restriction_level_function(function: Function):
+    restriction = eRestriction.other
 
-    elif condition.condition == eCondition.location_check:
-        restriction = eRestriction.none
+    match function.function:
 
-    elif condition.condition == eCondition.match_tool:
-        restriction = eRestriction.type_specific
+        case eFunction.copy_nbt:
+            restriction = eRestriction.table_specific
 
-    elif condition.condition == eCondition.random_chance:
-        restriction = eRestriction.none
-
-    elif condition.condition == eCondition.random_chance_with_looting:
-        restriction = eRestriction.type_specific
-
-    elif condition.condition == eCondition.reference:
-        pass
-
-    elif condition.condition == eCondition.survives_explosion:
-        restriction = eRestriction.type_specific
-
-    elif condition.condition == eCondition.table_bonus:
-        restriction = eRestriction.none
-
-    elif condition.condition == eCondition.tool_enchantment:
-        restriction = eRestriction.type_specific
-
-    elif condition.condition == eCondition.weather_check:
-        pass
+        case eFunction.looting_enchant | eFunction.apply_bonus:
+            restriction = eRestriction.type_specific
 
     return restriction

@@ -137,7 +137,7 @@ class Tag_String(Tag):
     value: str
 
     def __init__(self, value: str) -> None:
-        self.value = value.replace('"', '\\"')
+        self.value = value.replace('"', r'\"')
 
     def __str__(self) -> str:
         return f'"{self.value}"'
@@ -270,11 +270,11 @@ class NBTPath():
 
     @overload
     def __call__(self, tag: NBT) -> 'NBTPath':
-        return self
+        ...
 
     @overload
     def __call__(self, name: str) -> 'NBTPath':
-        return self
+        ...
 
     def __call__(self, *args: Union[NBT, str]) -> 'NBTPath':
         arg = args[0]

@@ -51,110 +51,110 @@ class TriggerConditions(JsonDict):
     pass
 
 
-def switch(trigger_type: eTrigger, conditions: dict[str, Any]) -> TriggerConditions:
-    if trigger_type == eTrigger.bred_animals:
+def switch(trigger: eTrigger, conditions: dict[str, Any]) -> TriggerConditions:
+    if trigger == eTrigger.bred_animals:
         return BredAnimals(conditions)
 
-    elif trigger_type == eTrigger.brewed_potion:
+    elif trigger == eTrigger.brewed_potion:
         return BrewedPotion(conditions)
 
-    elif trigger_type == eTrigger.changed_dimension:
+    elif trigger == eTrigger.changed_dimension:
         return ChangedDimension(conditions)
 
-    elif trigger_type == eTrigger.channeled_lightning:
+    elif trigger == eTrigger.channeled_lightning:
         return ChanneledLightning(conditions)
 
-    elif trigger_type == eTrigger.construct_beacon:
+    elif trigger == eTrigger.construct_beacon:
         return ConstructBeacon(conditions)
 
-    elif trigger_type == eTrigger.consume_item:
+    elif trigger == eTrigger.consume_item:
         return ConsumeItem(conditions)
 
-    elif trigger_type == eTrigger.cured_zombie_villager:
+    elif trigger == eTrigger.cured_zombie_villager:
         return CuredZombieVillager(conditions)
 
-    elif trigger_type == eTrigger.effects_changed:
+    elif trigger == eTrigger.effects_changed:
         return EffectsChanged(conditions)
 
-    elif trigger_type == eTrigger.enchanted_item:
+    elif trigger == eTrigger.enchanted_item:
         return EnchantedItem(conditions)
 
-    elif trigger_type == eTrigger.enter_block:
+    elif trigger == eTrigger.enter_block:
         return EnterBlock(conditions)
 
-    elif trigger_type == eTrigger.entity_hurt_player:
+    elif trigger == eTrigger.entity_hurt_player:
         return EntityHurtPlayer(conditions)
 
-    elif trigger_type == eTrigger.entity_killed_player:
+    elif trigger == eTrigger.entity_killed_player:
         return EntityKilledPlayer(conditions)
 
-    elif trigger_type == eTrigger.filled_bucket:
+    elif trigger == eTrigger.filled_bucket:
         return FilledBucket(conditions)
 
-    # elif trigger_type == eTrigger.fishing_rod_hooked:
+    # elif trigger == eTrigger.fishing_rod_hooked:
     # 	return FishingRodHooked(conditions)
 
-    # elif trigger_type == eTrigger.hero_of_the_village:
+    # elif trigger == eTrigger.hero_of_the_village:
     # 	return HeroOfTheVillage(conditions)
 
-    elif trigger_type == eTrigger.impossible:
+    elif trigger == eTrigger.impossible:
         return Impossible(conditions)
 
-    elif trigger_type == eTrigger.inventory_changed:
+    elif trigger == eTrigger.inventory_changed:
         return InventoryChanged(conditions)
 
-    # elif trigger_type == eTrigger.item_durability_changed:
+    # elif trigger == eTrigger.item_durability_changed:
     # 	return ItemDurabilityChanged(conditions)
 
-    # elif trigger_type == eTrigger.killed_by_crossbow:
+    # elif trigger == eTrigger.killed_by_crossbow:
     # 	return KilledByCrossbow(conditions)
 
-    # elif trigger_type == eTrigger.levitation:
+    # elif trigger == eTrigger.levitation:
     # 	return Levitation(conditions)
 
-    # elif trigger_type == eTrigger.location:
+    # elif trigger == eTrigger.location:
     # 	return Location(conditions)
 
-    # elif trigger_type == eTrigger.nether_travel:
+    # elif trigger == eTrigger.nether_travel:
     # 	return NetherTravel(conditions)
 
-    # elif trigger_type == eTrigger.placed_block:
+    # elif trigger == eTrigger.placed_block:
     # 	return PlacedBlock(conditions)
 
-    # elif trigger_type == eTrigger.player_hurt_entity:
+    # elif trigger == eTrigger.player_hurt_entity:
     # 	return PlayerHurtEntity(conditions)
 
-    # elif trigger_type == eTrigger.player_killed_entity:
+    # elif trigger == eTrigger.player_killed_entity:
     # 	return PlayerKilledEntity(conditions)
 
-    # elif trigger_type == eTrigger.recipe_unlocked:
+    # elif trigger == eTrigger.recipe_unlocked:
     # 	return RecipeUnlocked(conditions)
 
-    # elif trigger_type == eTrigger.shot_crossbow:
+    # elif trigger == eTrigger.shot_crossbow:
     # 	return ShotCrossbow(conditions)
 
-    # elif trigger_type == eTrigger.slept_in_bed:
+    # elif trigger == eTrigger.slept_in_bed:
     # 	return SleptInBed(conditions)
 
-    # elif trigger_type == eTrigger.summoned_entity:
+    # elif trigger == eTrigger.summoned_entity:
     # 	return SummonedEntity(conditions)
 
-    # elif trigger_type == eTrigger.tame_animal:
+    # elif trigger == eTrigger.tame_animal:
     # 	return TameAnimal(conditions)
 
-    # elif trigger_type == eTrigger.tick:
+    # elif trigger == eTrigger.tick:
     # 	return Tick(conditions)
 
-    # elif trigger_type == eTrigger.used_ender_eye:
+    # elif trigger == eTrigger.used_ender_eye:
     # 	return UsedEnderEye(conditions)
 
-    # elif trigger_type == eTrigger.used_totem:
+    # elif trigger == eTrigger.used_totem:
     # 	return UsedTotem(conditions)
 
-    # elif trigger_type == eTrigger.villager_trade:
+    # elif trigger == eTrigger.villager_trade:
     # 	return VillagerTrade(conditions)
 
-    # elif trigger_type == eTrigger.voluntary_exile:
+    # elif trigger == eTrigger.voluntary_exile:
     # 	return VoluntaryExile(conditions)
 
     else:
@@ -264,7 +264,7 @@ class PlayerKilledEntity(TriggerConditions):
 
 
 class Criteria(JsonDict, SpecialInit):
-    trigger_type:	eTrigger
+    trigger:	eTrigger
     conditions:		TriggerConditions
 
     @staticmethod
@@ -272,13 +272,13 @@ class Criteria(JsonDict, SpecialInit):
         criteria = Criteria(value)
         if 'conditions' in value:
             criteria.conditions = switch(
-                criteria.trigger_type, value['conditions'])
+                criteria.trigger, value['conditions'])
         return criteria
 
     @staticmethod
-    def populate(trigger_type: eTrigger, conditions: Optional[TriggerConditions] = None):
+    def populate(trigger: eTrigger, conditions: Optional[TriggerConditions] = None):
         criteria = Criteria()
-        criteria.trigger_type = trigger_type
+        criteria.trigger = trigger
         if conditions is not None:
             criteria.conditions = conditions
 

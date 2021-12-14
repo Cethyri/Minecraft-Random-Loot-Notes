@@ -63,5 +63,5 @@ def interact_with_items(parent: Union[dict[str, list[Any]], list[list[Any]]], su
         interact_with_item(parent[subscript],
                            parent[subscript].index(item), info)
 
-    if len(items) == 0:
+    if len(parent[subscript]) == 0:
         del parent[subscript]

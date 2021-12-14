@@ -1,110 +1,160 @@
+from dataclasses import dataclass
 import random
 from typing import Any
 
 from mcr.loot_table_map import LootTableMap
 from mcr.interactable import ActionInfo, ActionResult, eActionType
-from mcr.mc.data_structures.condition import Condition, eCondition
+from mcr.mc.data_structures.condition import Condition, RandomChance, eCondition
+from mcr.mc.data_structures.function import Function, eFunction
 from mcr.restriction import eRestriction, get_restriction_level
 
 
-def create_variety(original_conditions: dict[eCondition, list[Condition]]):
-    variety_tracker: dict[eCondition, list[int]] = {}
+interactable_union = Condition | Function
+interactable_type_union = eCondition | eFunction
+
+
+def get_interactable_type(interactable: interactable_union):
+    match interactable:
+        case Condition():
+            interactable_type = interactable.condition
+        case Function():
+            interactable_type = interactable.function
+    return interactable_type
+
+def create_variety(original_conditions: dict[interactable_type_union, list[interactable_union]]):
+    variety_tracker: dict[interactable_type_union, list[int]] = {}
     for type_, conditions in original_conditions.items():
         variety_tracker[type_] = list(range(0, len(conditions)))
         random.shuffle(variety_tracker[type_])
     return variety_tracker
 
+class InteractableValidationInfo():
+    variety_tracker: dict[interactable_type_union, list[int]]
+    original_interactable_count: int
+    original_interactables: dict[interactable_type_union, list[interactable_union]]
 
-class ValidationInfo():
-    variety_tracker: dict[eCondition, list[int]] = {}
-    original_condition_count: int = 0
-    validate_conditions = {}
-    original_conditions: dict[eCondition, list[Condition]]
+    def get_collection_delegate(self):
+
+        def collect(interactable: interactable_union, _: ActionInfo[Any]):
+            # TODO remove or implement commented code
+            # if info.depth not in original_conditions:
+            # 	original_conditions
+            # if condition.condition not in valid_condition_types:
+            # 	all_original_conditions.append(condition)
+            interactable_type: interactable_type_union
+
+            interactable_type = get_interactable_type(interactable)
+
+            if interactable_type not in self.original_interactables:
+                self.original_interactables[interactable_type] = []
+            self.original_interactables[interactable_type].append(
+                interactable)
+            self.original_interactable_count += 1
+            return ActionResult.NoAction()
+
+        return collect
+
+@dataclass
+class InteractableMap():
+    original: interactable_union
+    target: interactable_union
 
 
-def collect(condition: Condition, _: ActionInfo[Any]):
-    # TODO remove or implement commented code
-    # if info.depth not in original_conditions:
-    # 	original_conditions
-    # if condition.condition not in valid_condition_types:
-    # 	all_original_conditions.append(condition)
-    if condition.condition not in ValidationInfo.original_conditions:
-        ValidationInfo.original_conditions[condition.condition] = []
-    ValidationInfo.original_conditions[condition.condition].append(condition)
-    ValidationInfo.original_condition_count += 1
-    return ActionResult.NoAction()
 
 
-def validate(condition: Condition, loot_table_map: LootTableMap, condition_maps: list[dict[str, Condition]]):
-    restriction_level = get_restriction_level(condition)
+
+def confirm_delete(*_: Any):
+    return ActionResult(True, eActionType.Del)
+
+
+def get_validation_delegate(validation_info: InteractableValidationInfo, loot_table_map: LootTableMap, condition_maps: list[InteractableMap]):
+
+    def validate_condition(condition: Condition, _: Any):
+        return validate(validation_info, condition, loot_table_map, condition_maps)
+
+    return validate_condition
+
+
+def validate_conditions(loot_table_map: LootTableMap):
+    for type in [Condition, Function]:
+        validation_info: InteractableValidationInfo = InteractableValidationInfo()
+        validation_info.original_interactables = {}
+        validation_info.original_interactable_count = 0
+
+        loot_table_map.original.interact(
+            ActionInfo(type, validation_info.get_collection_delegate(), eActionType.Get))
+
+        validation_info.variety_tracker = create_variety(
+            validation_info.original_interactables)
+
+        interactable_maps: list[InteractableMap] = []
+        
+        default_condition = Condition.populate(eCondition.random_chance, {'value': 0.5})
+        default_function = Function.populate(eFunction.set_count, {'value': 1})
+
+        if validation_info.original_interactable_count == 0:
+            loot_table_map.target.interact(ActionInfo(
+                type, confirm_delete, eActionType.Del))
+            # match type:
+            #     case Condition():
+            #         validation_info.original_interactables[default_condition] # type: ignore
+            #     case Function():
+            #         validation_info.original_interactables[default_function] # type: ignore
+
+        else:
+
+
+            loot_table_map.target.interact(ActionInfo(type, get_validation_delegate(
+                validation_info, loot_table_map, interactable_maps), eActionType.Set))
+
+        # since we're basing the new loot table on the target table, the target type needs to be set to the original type or the minecraft environment will create issues.
+        loot_table_map.target.type_ = loot_table_map.original.type_
+
+
+def validate(validation_info: InteractableValidationInfo, interactable: interactable_union, loot_table_map: LootTableMap, maps: list[InteractableMap]):
+    restriction_level = get_restriction_level(interactable)
     restricted = True
 
     if restriction_level is eRestriction.none:
         restricted = False
 
     elif restriction_level is eRestriction.type_specific:
-        restricted = not loot_table_map.remapped.type_ == loot_table_map.original.type_
+        restricted = not loot_table_map.target.type_ == loot_table_map.original.type_
 
     elif restriction_level is eRestriction.table_specific:
-        restricted = not loot_table_map.name == loot_table_map.remap_name
+        restricted = not loot_table_map.name == loot_table_map.target_name
 
     elif restriction_level is eRestriction.dont_validate:
         restricted = False
 
-    condition_type = condition.condition
-    condition_type_in_original = condition_type in ValidationInfo.original_conditions
+    interactable_type = get_interactable_type(interactable)
+    interactable_type_in_original = interactable_type in validation_info.original_interactables
 
     if not restricted:
         return ActionResult.NoAction()
 
-    if condition_type_in_original:
-        if condition in ValidationInfo.original_conditions[condition.condition]:
+    if interactable_type_in_original:
+        if interactable in validation_info.original_interactables[interactable_type]:
             return ActionResult.NoAction()
 
-        for condition_map in condition_maps:
-            if condition_map['original'] == condition:
-                return ActionResult(condition_map['remapped'], eActionType.Set)
+        for map in maps:
+            if map.original == interactable:
+                return ActionResult(map.target, eActionType.Set)
 
-    if condition_type not in ValidationInfo.variety_tracker:
-        condition_type = random.choice(list(ValidationInfo.variety_tracker))
+    if interactable_type not in validation_info.variety_tracker:
+        interactable_type = random.choice(list(validation_info.variety_tracker))
 
-    condition_index = ValidationInfo.variety_tracker[condition_type].pop()
+    condition_index = validation_info.variety_tracker[interactable_type].pop()
 
-    if len(ValidationInfo.variety_tracker[condition_type]) == 0:
-        del ValidationInfo.variety_tracker[condition_type]
+    if len(validation_info.variety_tracker[interactable_type]) == 0:
+        del validation_info.variety_tracker[interactable_type]
 
-        # TODO: remove list() unneaded?
-        if len(list(ValidationInfo.variety_tracker)) == 0:
-            ValidationInfo.variety_tracker = create_variety(
-                ValidationInfo.original_conditions)
+        if len(validation_info.variety_tracker) == 0:
+            validation_info.variety_tracker = create_variety(
+                validation_info.original_interactables)
 
-    newCondition = ValidationInfo.original_conditions[condition_type][condition_index]
+    newInteractable = validation_info.original_interactables[interactable_type][condition_index]
 
-    condition_maps.append({
-        'original': condition,
-        'remapped': newCondition
-    })
+    maps.append(InteractableMap(interactable, newInteractable))
 
-    return ActionResult(newCondition, eActionType.Set)
-
-
-def validate_conditions(loot_table_map: LootTableMap):
-    ValidationInfo.original_conditions = {}
-    ValidationInfo.original_condition_count = 0
-
-    loot_table_map.original.interact(ActionInfo(
-        Condition, collect, eActionType.Get))
-
-    ValidationInfo.variety_tracker = create_variety(
-        ValidationInfo.original_conditions)
-    condition_maps: list[dict[str, Condition]] = []
-
-    if ValidationInfo.original_condition_count == 0:
-        loot_table_map.remapped.interact(ActionInfo(
-            Condition, lambda *_: ActionResult(True, eActionType.Del), eActionType.Del))
-    else:
-        loot_table_map.remapped.interact(ActionInfo(Condition, lambda condition, _: validate(
-            condition, loot_table_map, condition_maps), eActionType.Set))
-
-    # TODO: this might be breaking shit, when its type is checked in the future it'll be fucked up? or this is absolutely correct and I'm dumb, need to find out what remapped and original stand for again
-    loot_table_map.remapped.type_ = loot_table_map.original.type_
+    return ActionResult(newInteractable, eActionType.Set)

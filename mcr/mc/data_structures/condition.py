@@ -39,59 +39,65 @@ class Condition(JsonDict, Interactable, SpecialInit):
     @staticmethod
     def create(value: dict[str, Any]):
         condition = value['condition']
-        if condition == eCondition.alternative:
-            return Alternative(value)
+        return Condition.populate(condition, value)
 
-        elif condition == eCondition.block_state_property:
-            return BlockStateProperty(value)
+    @staticmethod
+    def populate(condition: eCondition, value: dict[str, Any]):
+        value['condition'] = condition
+        match condition:
+            case eCondition.alternative:
+                return Alternative(value)
 
-        elif condition == eCondition.damage_source_properties:
-            return DamageSourceProperties(value)
+            case eCondition.block_state_property:
+                return BlockStateProperty(value)
 
-        elif condition == eCondition.entity_present:
-            return EntityPresent(value)
+            case eCondition.damage_source_properties:
+                return DamageSourceProperties(value)
 
-        elif condition == eCondition.entity_properties:
-            return EntityProperties(value)
+            case eCondition.entity_present:
+                return EntityPresent(value)
 
-        elif condition == eCondition.entity_scores:
-            return EntityScores(value)
+            case eCondition.entity_properties:
+                return EntityProperties(value)
 
-        elif condition == eCondition.inverted:
-            return Inverted(value)
+            case eCondition.entity_scores:
+                return EntityScores(value)
 
-        elif condition == eCondition.killed_by_player:
-            return KilledByPlayer(value)
+            case eCondition.inverted:
+                return Inverted(value)
 
-        elif condition == eCondition.location_check:
-            return LocationCheck(value)
+            case eCondition.killed_by_player:
+                return KilledByPlayer(value)
 
-        elif condition == eCondition.match_tool:
-            return MatchTool(value)
+            case eCondition.location_check:
+                return LocationCheck(value)
 
-        elif condition == eCondition.random_chance:
-            return RandomChance(value)
+            case eCondition.match_tool:
+                return MatchTool(value)
 
-        elif condition == eCondition.random_chance_with_looting:
-            return RandomChanceWithLooting(value)
+            case eCondition.random_chance:
+                return RandomChance(value)
 
-        elif condition == eCondition.reference:
-            return Reference(value)
+            case eCondition.random_chance_with_looting:
+                return RandomChanceWithLooting(value)
 
-        elif condition == eCondition.survives_explosion:
-            return SurvivesExplosion(value)
+            case eCondition.reference:
+                return Reference(value)
 
-        elif condition == eCondition.table_bonus:
-            return TableBonus(value)
+            case eCondition.survives_explosion:
+                return SurvivesExplosion(value)
 
-        elif condition == eCondition.tool_enchantment:
-            return ToolEnchantment(value)
+            case eCondition.table_bonus:
+                return TableBonus(value)
 
-        elif condition == eCondition.weather_check:
-            return WeatherCheck(value)
+            case eCondition.tool_enchantment:
+                return ToolEnchantment(value)
 
-        else:
-            return Condition(value)
+            case eCondition.weather_check:
+                return WeatherCheck(value)
+
+            case _:
+                return Condition(value)
 
 
 class Alternative(Condition):
@@ -138,7 +144,7 @@ class MatchTool(Condition):
 
 
 class RandomChance(Condition):
-    pass
+    value: float
 
 
 class RandomChanceWithLooting(Condition):

@@ -45,7 +45,7 @@ class Progress(tk.Toplevel):
         mcr_data.printDetail = self.detailVar.set
 
     def step(self, step: str, amount: Optional[int] = None):
-        self.p_generation.step(amount)
+        self.p_generation.step(amount) # type: ignore
         self.stepVar.set(step)
 
 
@@ -114,10 +114,10 @@ class InfoFrame(ttk.Labelframe):
             self, textvariable=datapackName)
         self.e_datapackName.grid(sticky='sew')
 
-
         jar_paths: list[str]
         if os.path.exists(methods.TEMP_DIR):
-            jar_paths = list(os.path.relpath(p) for p in os.listdir(methods.TEMP_DIR))
+            jar_paths = list(os.path.relpath(p)
+                             for p in os.listdir(methods.TEMP_DIR))
         else:
             jar_paths = []
 
@@ -176,8 +176,8 @@ class Input(ttk.Frame):
         self.datapackName = tk.StringVar(value='mc_randomizer')
         self.jarName = tk.StringVar(value='')
 
-        self.seed.trace('w', self._handle_pack_name_change)
-        self.datapackName.trace('w', self._handle_pack_name_change)
+        self.seed.trace_variable('w', self._handle_pack_name_change) # type: ignore
+        self.datapackName.trace_variable('w', self._handle_pack_name_change) # type: ignore
 
         self.lf_flags = FlagsFrame(
             mcr_data, self.flags, self.handle_flag_change, master=self, text='Flags')
@@ -194,9 +194,9 @@ class Input(ttk.Frame):
             self.mcr_data.flags[flag_name] = self.flags[flag_name].get()
         return change_flag
 
-    notAllowed: str = r'[^a-zA-Z\d_.-+]'
+    notAllowed: str = r'[^a-zA-Z\d_.\-+]'
 
-    def _handle_pack_name_change(self):
+    def _handle_pack_name_change(self, varName: str, varIndex: int, operation: str):
         self.seed.set(re.sub(self.notAllowed, '', self.seed.get()))
 
         self.datapackName.set(
@@ -214,7 +214,7 @@ class Input(ttk.Frame):
         self._disableMainScreen()
 
         self.tl_progress = Progress(self.mcr_data)
-        self.tl_progress.transient(self) # type: ignore
+        self.tl_progress.transient(self)  # type: ignore
 
         def start():
             self._pickJar()
@@ -238,14 +238,15 @@ class Input(ttk.Frame):
             appdata: str = os.getenv('APPDATA') or "%Appdata%"
             mc_path = os.path.join(appdata, '.minecraft', 'versions')
 
-            jarpath = filedialog.askopenfilename(filetypes=files, initialdir=mc_path)
+            jarpath = filedialog.askopenfilename(
+                filetypes=files, initialdir=mc_path)
             jarname = os.path.basename(jarpath).replace('.jar', '')
 
             with zipfile.ZipFile(jarpath, 'r') as zip_:
                 # zip_.extract('assets') # texture randomization, eh? You know you wanna!
                 files = [n for n in zip_.namelist() if n.startswith('data/')]
                 zip_.extractall(os.path.join(methods.TEMP_DIR, jarname), files)
-        
+
         self.mcr_data.jarname = jarname
 
     def _done(self):

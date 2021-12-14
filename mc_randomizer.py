@@ -14,11 +14,12 @@ if flags_info_and_seed is None:
 flags = flags_info_and_seed[0]
 flagInfo = flags_info_and_seed[1]
 seed: Optional[str] = flags_info_and_seed[2]
+seed_generated: bool = True
 
 if seed is None:
+    seed_generated = False
     seed = str(random.randint(-sys.maxsize, sys.maxsize))
 
-seed_generated = flags_info_and_seed[2] is None
 
 datapack_name = 'mc_randomizer'
 

@@ -36,4 +36,12 @@ class Function(JsonDict, Interactable, SpecialInit):
 
     @staticmethod
     def create(value: dict[str, Any]):
-        return Function(value)
+        function = value['function']
+        return Function.populate(function, value)
+
+    @staticmethod
+    def populate(function: eFunction, value: dict[str, Any]):
+        value['function'] = function
+        match function:
+            case _:
+                return Function(value)

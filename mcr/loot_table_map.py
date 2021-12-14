@@ -1,4 +1,5 @@
 from enum import Enum, auto
+import os
 from typing import Optional
 
 from mcr.json_dict import JsonDict
@@ -29,8 +30,8 @@ class eAdvItemType(Enum):
 
 
 class AdvItem(JsonDict):
-    name:		str
-    item_name:	str
+    name:		    str
+    item_name:	    str
     adv_item_type:	eAdvItemType
     title:			Optional[str]
     description:	Optional[str]
@@ -48,25 +49,28 @@ class AdvItem(JsonDict):
 
 
 class LootTableMap():
-    remapped:       LootTable
-    remap_name: str
+    target:         LootTable
+    target_name:    str
     adv_chain:      list[AdvItem]
     adv_branches:   dict[str, list[AdvItem]]
     branch_map:     dict[str, int]
 
-    name: str
-    path: list[str]
-    original: LootTable
-    
-    is_loop: bool = False
-    is_sub: bool = False
+    name:       str
+    path:       list[str]
+    original:   LootTable
+
+    is_loop:    bool = False
+    is_sub:     bool = False
     adv_length: float = 0
 
     def __init__(self, name: str, path: list[str], loot_table: LootTable):
+        self.adv_chain = []
+        self.adv_branches = {}
+        self.branch_map = {}
         self.name = name
         self.path = path
         self.original = loot_table
 
     @property
     def file_path(self) -> str:
-        return '\\'.join(self.path)
+        return os.path.sep.join(self.path)

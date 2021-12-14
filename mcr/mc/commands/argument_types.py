@@ -80,13 +80,13 @@ class IntRange():
         return self.r
 
 
-class NamespacedId():
+class NamespacedId(): # TODO maybe do (str)
     def __init__(self, id_: str, namespace: str = 'minecraft') -> None:
         self.id_ = id_
         self.namespace = namespace
 
     def __str__(self) -> str:
-        return f'{self.id_}:{self.namespace}'
+        return f'{self.namespace}:{self.id_}'
 
 
 class Objective():
