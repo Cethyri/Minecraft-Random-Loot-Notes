@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Callable, Union
+from typing import Any, Callable, Literal, Union
 
 from mcr.flags import MCRFlags
 from mcr.loot_table_map import LootTableMap
@@ -26,7 +26,7 @@ class MCRData():
 
     datapack_desc: str
 
-    notesGrantSelector: str
+    notesGrantSelector: Literal['@s'] | Literal['@a']
 
     requires_cheats: list[str]
     double_tall_blocks: list[str]

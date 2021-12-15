@@ -2,6 +2,7 @@ from enum import Enum
 
 from mcr.json_dict import JsonDict
 from mcr.interactable import Interactable
+from mcr.mc.data_structures.function import Function
 
 from mcr.mc.data_structures.pool import Pool
 
@@ -21,3 +22,4 @@ class eLootTable(str, Enum):
 class LootTable(JsonDict, Interactable, overrides={'type_': 'type'}):
     type_:	eLootTable
     pools:	list[Pool]
+    functions: list[Function]

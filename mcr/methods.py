@@ -21,6 +21,7 @@ from mcr.mc.data_structures.criteria import (
     PlayerKilledEntity,
     eTrigger,
 )
+from mcr.mc.data_structures.function import Function as ltFunction, eFunction
 from mcr.mc.data_structures.display import Display
 from mcr.mc.data_structures.entity import Entity
 from mcr.mc.data_structures.loot_table import LootTable, eLootTable
@@ -37,7 +38,7 @@ from mcr.populate_advancement_chain import populate_advancement_chain
 from mcr.validation import validate_conditions
 
 TEMP_DIR = "mc_temp_dir"
-TOTAL_STEPS = 10
+TOTAL_STEPS = 11
 
 
 def initialize_pack_info(mcr_data: MCRData):
@@ -103,12 +104,12 @@ def load_all_table_info(mcr_data: MCRData):
 
             mcr_data.loot_table_maps[table_name] = LootTableMap(
                 table_name, relative_path, loot_table
-            )
+            )       
 
 
 def randomize(mcr_data: MCRData):
     """
-    Assigns instantiates a loot table map for every loot table and pairs each with a target loot table.
+    Instantiates a loot table map for every loot table and pairs each with a target loot table.
     The original is a reference for the source, target is a reference for the drops, both are a reference for the conditions.
     """
     target_maps: list[LootTableMap] = list(mcr_data.loot_table_maps.values())
@@ -123,6 +124,14 @@ def randomize(mcr_data: MCRData):
         loot_table_map.target = LootTable(
             json.loads(json.dumps(target_map.original))
         )  # Deep Copy
+
+        
+def add_nbt_setter(loot_table_map: LootTableMap):
+    set_nbt = ltFunction.populate(eFunction.set_nbt, {'tag': json.dumps({'mcr_val': loot_table_map.name})})
+    if ('functions' not in loot_table_map.target or loot_table_map.target.functions is None):
+        loot_table_map.target.functions = [set_nbt]
+    else:
+        loot_table_map.target.functions.extend([set_nbt])
 
 
 def populate_chains(mcr_data: MCRData):
@@ -210,8 +219,9 @@ def generate_children_functions(
     child_index: int,
     execute_conditions_list: list[Callable[..., Any]],
 ):
-    mcr_data.functions[pathed_name].append("scoreboard players set @s mcr_incomplete 0")
-    mcr_data.functions[pathed_name].append("scoreboard players set @s mcr_complete 0")
+    (mcr_data.functions[pathed_name]
+    .custom('scoreboard players set @s mcr_incomplete 0')
+    .custom('scoreboard players set @s mcr_complete 0'))
 
     references: list[str] = []
     search_queue = [start_link]
@@ -227,9 +237,8 @@ def generate_children_functions(
         current_map = mcr_data.loot_table_maps[cur_link.name]
 
         if is_reference:
-            mcr_data.functions[pathed_name].append(
-                "scoreboard players set @s mcr_ref_complete 0"
-            )
+            (mcr_data.functions[pathed_name]
+            .custom('scoreboard players set @s mcr_ref_complete 0'))
 
         references.append(current_map.name)
 
@@ -899,10 +908,10 @@ def GetZipBytes(mcr_data: MCRData) -> io.BytesIO:
 def initialize_functions(mcr_data: MCRData):
     (
         mcr_data.functions["load"]
+        .custom("scoreboard objectives add mcr_loaded dummy")
         .execute()
         .unless_score_matches(mcArgs.Entity("debug"), mcArgs.Objective("mcr_loaded"), 1)
         .run(Function(mcr_data.datapack_id("add")))
-        .custom("scoreboard objectives add mcr_loaded dummy")
         .custom("scoreboard players set debug mcr_loaded 1")
         .custom('scoreboard objectives add show_debug trigger ["",{"text":"Debug"}]')
         .custom(
@@ -1026,6 +1035,10 @@ def mc_randomizer(
     mcr_data.printStep("Validating loot tables...")
     for loot_table_map in mcr_data.loot_table_maps.values():
         validate_conditions(loot_table_map)
+
+    mcr_data.printStep("Adding NBT Setters...")
+    for loot_table_map in mcr_data.loot_table_maps.values():
+        add_nbt_setter(loot_table_map)
 
     mcr_data.printStep("Populating Advancement chains...")
     populate_chains(mcr_data)
