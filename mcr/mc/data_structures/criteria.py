@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union
+from typing import Any, Union
 from enum import Enum
 
 from mcr.json_dict import JsonDict, SpecialInit
@@ -54,112 +54,112 @@ class TriggerConditions(JsonDict):
 def switch(trigger: eTrigger, conditions: dict[str, Any]) -> TriggerConditions:
     match trigger:
         case eTrigger.bred_animals:
-        return BredAnimals(conditions)
+            return BredAnimals(conditions)
 
         case eTrigger.brewed_potion:
-        return BrewedPotion(conditions)
+            return BrewedPotion(conditions)
 
         case eTrigger.changed_dimension:
-        return ChangedDimension(conditions)
+            return ChangedDimension(conditions)
 
         case eTrigger.channeled_lightning:
-        return ChanneledLightning(conditions)
+            return ChanneledLightning(conditions)
 
         case eTrigger.construct_beacon:
-        return ConstructBeacon(conditions)
+            return ConstructBeacon(conditions)
 
         case eTrigger.consume_item:
-        return ConsumeItem(conditions)
+            return ConsumeItem(conditions)
 
         case eTrigger.cured_zombie_villager:
-        return CuredZombieVillager(conditions)
+            return CuredZombieVillager(conditions)
 
         case eTrigger.effects_changed:
-        return EffectsChanged(conditions)
+            return EffectsChanged(conditions)
 
         case eTrigger.enchanted_item:
-        return EnchantedItem(conditions)
+            return EnchantedItem(conditions)
 
         case eTrigger.enter_block:
-        return EnterBlock(conditions)
+            return EnterBlock(conditions)
 
         case eTrigger.entity_hurt_player:
-        return EntityHurtPlayer(conditions)
+            return EntityHurtPlayer(conditions)
 
         case eTrigger.entity_killed_player:
-        return EntityKilledPlayer(conditions)
+            return EntityKilledPlayer(conditions)
 
         case eTrigger.filled_bucket:
-        return FilledBucket(conditions)
+            return FilledBucket(conditions)
 
         # case eTrigger.fishing_rod_hooked:
-    # 	return FishingRodHooked(conditions)
+        # 	return FishingRodHooked(conditions)
 
         # case eTrigger.hero_of_the_village:
-    # 	return HeroOfTheVillage(conditions)
+        # 	return HeroOfTheVillage(conditions)
 
         case eTrigger.impossible:
-        return Impossible(conditions)
+            return Impossible(conditions)
 
         case eTrigger.inventory_changed:
-        return InventoryChanged(conditions)
+            return InventoryChanged(conditions)
 
         # case eTrigger.item_durability_changed:
-    # 	return ItemDurabilityChanged(conditions)
+        # 	return ItemDurabilityChanged(conditions)
 
         # case eTrigger.killed_by_crossbow:
-    # 	return KilledByCrossbow(conditions)
+        # 	return KilledByCrossbow(conditions)
 
         # case eTrigger.levitation:
-    # 	return Levitation(conditions)
+        # 	return Levitation(conditions)
 
         # case eTrigger.location:
-    # 	return Location(conditions)
+        # 	return Location(conditions)
 
         # case eTrigger.nether_travel:
-    # 	return NetherTravel(conditions)
+        # 	return NetherTravel(conditions)
 
         # case eTrigger.placed_block:
-    # 	return PlacedBlock(conditions)
+        # 	return PlacedBlock(conditions)
 
         # case eTrigger.player_hurt_entity:
-    # 	return PlayerHurtEntity(conditions)
+        # 	return PlayerHurtEntity(conditions)
 
         # case eTrigger.player_killed_entity:
-    # 	return PlayerKilledEntity(conditions)
+        # 	return PlayerKilledEntity(conditions)
 
         # case eTrigger.recipe_unlocked:
-    # 	return RecipeUnlocked(conditions)
+        # 	return RecipeUnlocked(conditions)
 
         # case eTrigger.shot_crossbow:
-    # 	return ShotCrossbow(conditions)
+        # 	return ShotCrossbow(conditions)
 
         # case eTrigger.slept_in_bed:
-    # 	return SleptInBed(conditions)
+        # 	return SleptInBed(conditions)
 
         # case eTrigger.summoned_entity:
-    # 	return SummonedEntity(conditions)
+        # 	return SummonedEntity(conditions)
 
         # case eTrigger.tame_animal:
-    # 	return TameAnimal(conditions)
+        # 	return TameAnimal(conditions)
 
         # case eTrigger.tick:
-    # 	return Tick(conditions)
+        # 	return Tick(conditions)
 
         # case eTrigger.used_ender_eye:
-    # 	return UsedEnderEye(conditions)
+        # 	return UsedEnderEye(conditions)
 
         # case eTrigger.used_totem:
-    # 	return UsedTotem(conditions)
+        # 	return UsedTotem(conditions)
 
         # case eTrigger.villager_trade:
-    # 	return VillagerTrade(conditions)
+        # 	return VillagerTrade(conditions)
 
         # case eTrigger.voluntary_exile:
-    # 	return VoluntaryExile(conditions)
+        # 	return VoluntaryExile(conditions)
 
         case _:
-        return TriggerConditions(conditions)
+            return TriggerConditions(conditions)
 
 
 class BredAnimals(TriggerConditions):
@@ -270,17 +270,17 @@ class Criteria(JsonDict, SpecialInit):
 
     @staticmethod
     def create(value: dict[str, Any]):
-        criteria = Criteria(value)
-        if 'conditions' in value:
-            criteria.conditions = switch(
-                criteria.trigger, value['conditions'])
-        return criteria
+        trigger = value['trigger']
+        condition = value['condition'] if 'condition' in value else None
+        return Criteria.populate(trigger, condition)
 
     @staticmethod
-    def populate(trigger: eTrigger, conditions: Optional[TriggerConditions] = None):
+    def populate(trigger: eTrigger, conditions: TriggerConditions | dict[str, Any] | None = None):
         criteria = Criteria()
         criteria.trigger = trigger
-        if conditions is not None:
-            criteria.conditions = conditions
-
+        match conditions:
+            case TriggerConditions():
+                criteria.conditions = conditions
+            case dict():
+                criteria.conditions = switch(trigger, conditions)
         return criteria
