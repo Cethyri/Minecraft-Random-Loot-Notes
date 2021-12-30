@@ -4,7 +4,7 @@ from typing import Any
 
 from mcr.loot_table_map import LootTableMap
 from mcr.interactable import ActionInfo, ActionResult, eActionType
-from mcr.mc.data_structures.condition import Condition, RandomChance, eCondition
+from mcr.mc.data_structures.condition import Condition, eCondition
 from mcr.mc.data_structures.function import Function, eFunction
 from mcr.restriction import eRestriction, get_restriction_level
 
@@ -89,8 +89,9 @@ def validate_conditions(loot_table_map: LootTableMap):
 
         interactable_maps: list[InteractableMap] = []
         
-        default_condition = Condition.populate(eCondition.random_chance, {'value': 0.5})
-        default_function = Function.populate(eFunction.set_count, {'value': 1})
+        # TODO implement a default replacement for certain condition and function types.
+        # default_condition = Condition.populate(eCondition.random_chance, {'value': 0.5})
+        # default_function = Function.populate(eFunction.set_count, {'value': 1})
 
         if validation_info.original_interactable_count == 0:
             loot_table_map.target.interact(ActionInfo(
