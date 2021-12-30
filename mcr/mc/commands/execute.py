@@ -83,16 +83,16 @@ class Execute(ChainCommand[T]):
     def anchored(self, anchor: entity_anchor):
         return self._chainSelf(f'anchored {anchor}')
 
-    def as_(self, targets: Union[Entity, selector]):
+    def as_(self, targets: Entity | selector):
         return self._chainSelf(f'as {targets}')
 
-    def at(self, targets: Union[Entity, selector]):
+    def at(self, targets: Entity | selector):
         return self._chainSelf(f'at {targets}')
 
     def facing(self, pos: Vec3):
         return self._chainSelf(f'facing {pos}')
 
-    def facing_entity(self, target: Union[Entity, selector], anchor: entity_anchor):
+    def facing_entity(self, target: Entity | selector, anchor: entity_anchor):
         return self._chainSelf(f'facing entity {target} {anchor}')
 
     def in_(self, dim: dimension):
@@ -101,13 +101,13 @@ class Execute(ChainCommand[T]):
     def positioned(self, pos: Vec3):
         return self._chainSelf(f'positioned {pos}')
 
-    def positioned_as(self, targets: Union[Entity, selector]):
+    def positioned_as(self, targets: Entity | selector):
         return self._chainSelf(f'positioned as {targets}')
 
     def rotated(self, rot: Rotation):
         return self._chainSelf(f'rotated {rot}')
 
-    def rotated_as(self, targets: Union[Entity, selector]):
+    def rotated_as(self, targets: Entity | selector):
         return self._chainSelf(f'rotated as {targets}')
 
     def store(self, value: eStoreReturn, target: eStoreContainer, arguments: str):
@@ -125,16 +125,16 @@ class Execute(ChainCommand[T]):
     def store_success_bossbar(self, barId: NamespacedId, target: eBossbarTarget):
         return self.store(eStoreReturn.success, eStoreContainer.bossbar, f'{barId} {target}')
 
-    def store_result_entity(self, target: Union[Entity, selector], path: NBTPath, nbtType: eNBTType, scale: float):
+    def store_result_entity(self, target: Entity | selector, path: NBTPath, nbtType: eNBTType, scale: float):
         return self.store(eStoreReturn.result, eStoreContainer.entity, f'{target} {path} {nbtType} {scale}')
 
-    def store_success_entity(self, target: Union[Entity, selector], path: NBTPath, nbtType: eNBTType, scale: float):
+    def store_success_entity(self, target: Entity | selector, path: NBTPath, nbtType: eNBTType, scale: float):
         return self.store(eStoreReturn.success, eStoreContainer.entity, f'{target} {path} {nbtType} {scale}')
 
-    def store_result_score(self, name: Union[Entity, selector], objective: Objective):
+    def store_result_score(self, name: Entity | selector, objective: Objective):
         return self.store(eStoreReturn.result, eStoreContainer.score, f'{name} {objective}')
 
-    def store_success_score(self, name: Union[Entity, selector], objective: Objective):
+    def store_success_score(self, name: Entity | selector, objective: Objective):
         return self.store(eStoreReturn.success, eStoreContainer.score, f'{name} {objective}')
 
     def store_result_storage(self, target: NamespacedId, path: NBTPath, nbtType: eNBTType, scale: float):
@@ -165,10 +165,10 @@ class Execute(ChainCommand[T]):
     def unless_data_block(self, pos: BlockPos, path: NBTPath):
         return self.if_unless(False, eConditionalType.data, f'{eDataCheck.block} {pos} {path}')
 
-    def if_data_entity(self, target: Union[Entity, selector], path: NBTPath):
+    def if_data_entity(self, target: Entity | selector, path: NBTPath):
         return self.if_unless(True, eConditionalType.data, f'{eDataCheck.entity} {target} {path}')
 
-    def unless_data_entity(self, target: Union[Entity, selector], path: NBTPath):
+    def unless_data_entity(self, target: Entity | selector, path: NBTPath):
         return self.if_unless(False, eConditionalType.data, f'{eDataCheck.entity} {target} {path}')
 
     def if_data_storage(self, source: NamespacedId, path: NBTPath):
@@ -177,10 +177,10 @@ class Execute(ChainCommand[T]):
     def unless_data_storage(self, source: NamespacedId, path: NBTPath):
         return self.if_unless(False, eConditionalType.data, f'{eDataCheck.storage} {source} {path}')
 
-    def if_entity(self, target: Union[Entity, selector]):
+    def if_entity(self, target: Entity | selector):
         return self.if_unless(True, eConditionalType.entity, str(target))
 
-    def unless_entity(self, target: Union[Entity, selector]):
+    def unless_entity(self, target: Entity | selector):
         return self.if_unless(False, eConditionalType.entity, str(target))
 
     def if_predicate(self, predicate: NamespacedId):
@@ -189,17 +189,17 @@ class Execute(ChainCommand[T]):
     def unless_predicate(self, predicate: NamespacedId):
         return self.if_unless(False, eConditionalType.predicate, str(predicate))
 
-    def if_score(self, target: Union[Entity, selector], targetObjective: Objective, comparison: eComparison, source: Union[Entity, selector], sourceObjective: Objective):
+    def if_score(self, target: Entity | selector, targetObjective: Objective, comparison: eComparison, source: Entity | selector, sourceObjective: Objective):
         return self.if_unless(True, eConditionalType.score, f'{target} {targetObjective} {comparison} {source} {sourceObjective}')
 
-    def unless_score(self, target: Union[Entity, selector], targetObjective: Objective, comparison: eComparison, source: Union[Entity, selector], sourceObjective: Objective):
+    def unless_score(self, target: Entity | selector, targetObjective: Objective, comparison: eComparison, source: Entity | selector, sourceObjective: Objective):
         return self.if_unless(False, eConditionalType.score, f'{target} {targetObjective} {comparison} {source} {sourceObjective}')
 
-    def if_score_matches(self, target: Union[Entity, selector], targetObjective: Objective, range_: Union[IntRange, str, int]):
+    def if_score_matches(self, target: Entity | selector, targetObjective: Objective, range_: Union[IntRange, str, int]):
         return self.if_unless(True, eConditionalType.score, f'{target} {targetObjective} matches {range_}')
 
-    def unless_score_matches(self, target: Union[Entity, selector], targetObjective: Objective, range_: Union[IntRange, str, int]):
+    def unless_score_matches(self, target: Entity | selector, targetObjective: Objective, range_: Union[IntRange, str, int]):
         return self.if_unless(False, eConditionalType.score, f'{target} {targetObjective} matches {range_}')
 
-    def run(self, command: Union[Command, str]) -> T:
+    def run(self, command: Command | str) -> T:
         return self._chainOwner(f'run {command}')

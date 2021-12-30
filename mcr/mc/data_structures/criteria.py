@@ -52,112 +52,113 @@ class TriggerConditions(JsonDict):
 
 
 def switch(trigger: eTrigger, conditions: dict[str, Any]) -> TriggerConditions:
-    if trigger == eTrigger.bred_animals:
+    match trigger:
+        case eTrigger.bred_animals:
         return BredAnimals(conditions)
 
-    elif trigger == eTrigger.brewed_potion:
+        case eTrigger.brewed_potion:
         return BrewedPotion(conditions)
 
-    elif trigger == eTrigger.changed_dimension:
+        case eTrigger.changed_dimension:
         return ChangedDimension(conditions)
 
-    elif trigger == eTrigger.channeled_lightning:
+        case eTrigger.channeled_lightning:
         return ChanneledLightning(conditions)
 
-    elif trigger == eTrigger.construct_beacon:
+        case eTrigger.construct_beacon:
         return ConstructBeacon(conditions)
 
-    elif trigger == eTrigger.consume_item:
+        case eTrigger.consume_item:
         return ConsumeItem(conditions)
 
-    elif trigger == eTrigger.cured_zombie_villager:
+        case eTrigger.cured_zombie_villager:
         return CuredZombieVillager(conditions)
 
-    elif trigger == eTrigger.effects_changed:
+        case eTrigger.effects_changed:
         return EffectsChanged(conditions)
 
-    elif trigger == eTrigger.enchanted_item:
+        case eTrigger.enchanted_item:
         return EnchantedItem(conditions)
 
-    elif trigger == eTrigger.enter_block:
+        case eTrigger.enter_block:
         return EnterBlock(conditions)
 
-    elif trigger == eTrigger.entity_hurt_player:
+        case eTrigger.entity_hurt_player:
         return EntityHurtPlayer(conditions)
 
-    elif trigger == eTrigger.entity_killed_player:
+        case eTrigger.entity_killed_player:
         return EntityKilledPlayer(conditions)
 
-    elif trigger == eTrigger.filled_bucket:
+        case eTrigger.filled_bucket:
         return FilledBucket(conditions)
 
-    # elif trigger == eTrigger.fishing_rod_hooked:
+        # case eTrigger.fishing_rod_hooked:
     # 	return FishingRodHooked(conditions)
 
-    # elif trigger == eTrigger.hero_of_the_village:
+        # case eTrigger.hero_of_the_village:
     # 	return HeroOfTheVillage(conditions)
 
-    elif trigger == eTrigger.impossible:
+        case eTrigger.impossible:
         return Impossible(conditions)
 
-    elif trigger == eTrigger.inventory_changed:
+        case eTrigger.inventory_changed:
         return InventoryChanged(conditions)
 
-    # elif trigger == eTrigger.item_durability_changed:
+        # case eTrigger.item_durability_changed:
     # 	return ItemDurabilityChanged(conditions)
 
-    # elif trigger == eTrigger.killed_by_crossbow:
+        # case eTrigger.killed_by_crossbow:
     # 	return KilledByCrossbow(conditions)
 
-    # elif trigger == eTrigger.levitation:
+        # case eTrigger.levitation:
     # 	return Levitation(conditions)
 
-    # elif trigger == eTrigger.location:
+        # case eTrigger.location:
     # 	return Location(conditions)
 
-    # elif trigger == eTrigger.nether_travel:
+        # case eTrigger.nether_travel:
     # 	return NetherTravel(conditions)
 
-    # elif trigger == eTrigger.placed_block:
+        # case eTrigger.placed_block:
     # 	return PlacedBlock(conditions)
 
-    # elif trigger == eTrigger.player_hurt_entity:
+        # case eTrigger.player_hurt_entity:
     # 	return PlayerHurtEntity(conditions)
 
-    # elif trigger == eTrigger.player_killed_entity:
+        # case eTrigger.player_killed_entity:
     # 	return PlayerKilledEntity(conditions)
 
-    # elif trigger == eTrigger.recipe_unlocked:
+        # case eTrigger.recipe_unlocked:
     # 	return RecipeUnlocked(conditions)
 
-    # elif trigger == eTrigger.shot_crossbow:
+        # case eTrigger.shot_crossbow:
     # 	return ShotCrossbow(conditions)
 
-    # elif trigger == eTrigger.slept_in_bed:
+        # case eTrigger.slept_in_bed:
     # 	return SleptInBed(conditions)
 
-    # elif trigger == eTrigger.summoned_entity:
+        # case eTrigger.summoned_entity:
     # 	return SummonedEntity(conditions)
 
-    # elif trigger == eTrigger.tame_animal:
+        # case eTrigger.tame_animal:
     # 	return TameAnimal(conditions)
 
-    # elif trigger == eTrigger.tick:
+        # case eTrigger.tick:
     # 	return Tick(conditions)
 
-    # elif trigger == eTrigger.used_ender_eye:
+        # case eTrigger.used_ender_eye:
     # 	return UsedEnderEye(conditions)
 
-    # elif trigger == eTrigger.used_totem:
+        # case eTrigger.used_totem:
     # 	return UsedTotem(conditions)
 
-    # elif trigger == eTrigger.villager_trade:
+        # case eTrigger.villager_trade:
     # 	return VillagerTrade(conditions)
 
-    # elif trigger == eTrigger.voluntary_exile:
+        # case eTrigger.voluntary_exile:
     # 	return VoluntaryExile(conditions)
 
-    else:
+        case _:
         return TriggerConditions(conditions)
 
 
