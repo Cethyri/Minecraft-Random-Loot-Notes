@@ -2,7 +2,7 @@ from collections import defaultdict
 from typing import Any, Callable, Literal, Union
 
 from mcr.flags import MCRFlags
-from mcr.loot_table_map import LootTableMap
+from mcr.randomizer_template import RandomizerTemplate
 import mcr.mc.commands.argument_types as mcArgs
 from mcr.mc.commands.mcfunction import MCFunction
 from mcr.mc.data_structures.advancement import Advancement
@@ -31,7 +31,7 @@ class MCRData():
     requires_cheats: list[str]
     double_tall_blocks: list[str]
 
-    loot_table_maps: dict[str, LootTableMap] = {}
+    rand_templates: dict[str, RandomizerTemplate] = {}
 
     tabs: list[str] = []
     advancements: dict[str, Advancement] = {}

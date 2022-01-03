@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import random
 from typing import Any
 
-from mcr.loot_table_map import LootTableMap
+from mcr.randomizer_template import RandomizerTemplate
 from mcr.interactable import ActionInfo, ActionResult, eActionType
 from mcr.mc.data_structures.condition import Condition, eCondition
 from mcr.mc.data_structures.function import Function, eFunction
@@ -67,7 +67,7 @@ def confirm_delete(*_: Any):
     return ActionResult(True, eActionType.Del)
 
 
-def get_validation_delegate(validation_info: InteractableValidationInfo, loot_table_map: LootTableMap, condition_maps: list[InteractableMap]):
+def get_validation_delegate(validation_info: InteractableValidationInfo, loot_table_map: RandomizerTemplate, condition_maps: list[InteractableMap]):
 
     def validate_condition(condition: Condition, _: Any):
         return validate(validation_info, condition, loot_table_map, condition_maps)
@@ -75,7 +75,7 @@ def get_validation_delegate(validation_info: InteractableValidationInfo, loot_ta
     return validate_condition
 
 
-def validate_conditions(loot_table_map: LootTableMap):
+def validate_conditions(loot_table_map: RandomizerTemplate):
     for type in [Condition, Function]:
         validation_info: InteractableValidationInfo = InteractableValidationInfo()
         validation_info.original_interactables = {}
@@ -112,7 +112,7 @@ def validate_conditions(loot_table_map: LootTableMap):
         loot_table_map.target.type_ = loot_table_map.original.type_
 
 
-def validate(validation_info: InteractableValidationInfo, interactable: interactable_union, loot_table_map: LootTableMap, maps: list[InteractableMap]):
+def validate(validation_info: InteractableValidationInfo, interactable: interactable_union, loot_table_map: RandomizerTemplate, maps: list[InteractableMap]):
     restriction_level = get_restriction_level(interactable)
     restricted = True
 

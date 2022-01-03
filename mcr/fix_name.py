@@ -1,4 +1,4 @@
-from mcr.loot_table_map import AdvItem, LootTableMap, eAdvItemType
+from mcr.randomizer_template import AdvItem, RandomizerTemplate, eAdvItemType
 import warnings
 
 from mcr.helpers.regex import get_upper_name
@@ -12,6 +12,7 @@ def fix_advancement_reward_name(adv_item: AdvItem):
 def fix_barter_name(adv_item: AdvItem):
     adv_item.item_name = 'gold_ingot'
     adv_item.description = 'Barter With a Piglin'
+
 
 def fix_block_name(adv_item: AdvItem):
     prev_type = adv_item.adv_item_type
@@ -110,12 +111,12 @@ def fix_chest_name(adv_item: AdvItem):
     adv_item.description = f'Find a {get_upper_name(adv_item.name)} Chest'
 
 
-def fix_empty_name(adv_item: AdvItem, loot_table_map: LootTableMap):
+def fix_empty_name(adv_item: AdvItem, rand_template: RandomizerTemplate):
     pass
 
 
-def fix_entity_name(adv_item: AdvItem, loot_table_map: LootTableMap):
-    if adv_item.name == 'sheep' or 'sheep' in loot_table_map.path:
+def fix_entity_name(adv_item: AdvItem, rand_template: RandomizerTemplate):
+    if adv_item.name == 'sheep' or 'sheep' in rand_template.path:
         adv_item.item_name = 'sheep_spawn_egg'
         if adv_item.name != 'sheep':
             adv_item.title = f'{get_upper_name(adv_item.name)} Sheep'
@@ -236,9 +237,9 @@ def fix_gift_name(adv_item: AdvItem):
     adv_item.description = f'Recieve a {get_upper_name(adv_item.name)}'
 
 
-def fix_name(adv_item: AdvItem, loot_table_map: LootTableMap):
+def fix_name(adv_item: AdvItem, rand_template: RandomizerTemplate):
     adv_item2 = AdvItem(adv_item.name, adv_item.adv_item_type, adv_item.item_name, adv_item.title, adv_item.description)
-    match loot_table_map.original.type_:
+    match rand_template.original.type_:
         case eLootTable.advancement_reward:
             fix_advancement_reward_name(adv_item)
 
@@ -252,7 +253,7 @@ def fix_name(adv_item: AdvItem, loot_table_map: LootTableMap):
             fix_chest_name(adv_item)
 
         case eLootTable.entity:
-            fix_entity_name(adv_item, loot_table_map)
+            fix_entity_name(adv_item, rand_template)
 
         case eLootTable.fishing:
             fix_fishing_name(adv_item)
@@ -265,13 +266,13 @@ def fix_name(adv_item: AdvItem, loot_table_map: LootTableMap):
 
         case _:
             warnings.warn(
-                f'Unrecognized loot table type: {loot_table_map.original.type_}, script is probably outdated, download the newest version or yell at the developer for not updating the script!')
+                f'Unrecognized loot table type: {rand_template.original.type_}, script is probably outdated, download the newest version or yell at the developer for not updating the script!')
 
     if adv_item.description is None:
         warnings.warn(
             f'Something went wrong, description not set for: {adv_item.name}')
 
-def create_and_fix_name(adv_name: str, item_type: eAdvItemType, loot_table_maps: dict[str, LootTableMap]):
+def create_and_fix_name(adv_name: str, item_type: eAdvItemType, rand_templates: dict[str, RandomizerTemplate]):
     adv_item = AdvItem(adv_name, item_type)
-    fix_name(adv_item, loot_table_maps[adv_name])
+    fix_name(adv_item, rand_templates[adv_name])
     return adv_item

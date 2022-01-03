@@ -48,16 +48,19 @@ class AdvItem(JsonDict):
         return self.adv_item_type.frame
 
 
-class LootTableMap():
+class RandomizerTemplate():
+    path:       list[str]
+    """A list of directories that make up the filepath of the original loot table"""
+    
+    original:   LootTable
+    """the original contents of the file"""
+    name:       str
     target:         LootTable
     target_name:    str
+
     adv_chain:      list[AdvItem]
     adv_branches:   dict[str, list[AdvItem]]
     branch_map:     dict[str, int]
-
-    name:       str
-    path:       list[str]
-    original:   LootTable
 
     is_loop:    bool = False
     is_sub:     bool = False

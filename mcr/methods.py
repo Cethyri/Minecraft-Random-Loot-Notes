@@ -9,7 +9,7 @@ from typing import Any, Callable, IO, Optional, Union
 
 import mcr.mc.commands.argument_types as mcArgs
 from mcr.helpers.regex import get_upper_name, shorten_name
-from mcr.loot_table_map import AdvItem, LootTableMap, eAdvItemType
+from mcr.randomizer_template import AdvItem, RandomizerTemplate, eAdvItemType
 from mcr.mc.commands.execute import Execute
 from mcr.mc.commands.function import Function
 from mcr.mc.commands.mcfunction import MCFunction
@@ -102,21 +102,21 @@ def load_all_table_info(mcr_data: MCRData):
             if loot_table is None:
                 continue
 
-            mcr_data.loot_table_maps[table_name] = LootTableMap(
+            mcr_data.rand_templates[table_name] = RandomizerTemplate(
                 table_name, relative_path, loot_table
             )       
 
 
 def randomize(mcr_data: MCRData):
     """
-    Instantiates a loot table map for every loot table and pairs each with a target loot table.
+    Pairs each loot table with a target loot table.
     The original is a reference for the source, target is a reference for the drops, both are a reference for the conditions.
     """
-    target_maps: list[LootTableMap] = list(mcr_data.loot_table_maps.values())
+    target_maps: list[RandomizerTemplate] = list(mcr_data.rand_templates.values())
     random.shuffle(target_maps)
 
     for loot_table_map, target_map in zip(
-        mcr_data.loot_table_maps.values(), target_maps
+        mcr_data.rand_templates.values(), target_maps
     ):
 
         loot_table_map.target_name = target_map.name
@@ -126,7 +126,7 @@ def randomize(mcr_data: MCRData):
         )  # Deep Copy
 
         
-def add_nbt_setter(loot_table_map: LootTableMap):
+def add_nbt_setter(loot_table_map: RandomizerTemplate):
     set_nbt = ltFunction.populate(eFunction.set_nbt, {'tag': json.dumps({'mcr_val': loot_table_map.name})})
     if ('functions' not in loot_table_map.target or loot_table_map.target.functions is None):
         loot_table_map.target.functions = [set_nbt]
@@ -135,13 +135,13 @@ def add_nbt_setter(loot_table_map: LootTableMap):
 
 
 def populate_chains(mcr_data: MCRData):
-    current_map: LootTableMap
-    for name, loot_table_map in mcr_data.loot_table_maps.items():
+    current_map: RandomizerTemplate
+    for name, loot_table_map in mcr_data.rand_templates.items():
 
-        populate_advancement_chain(name, mcr_data.loot_table_maps)
+        populate_advancement_chain(name, mcr_data.rand_templates)
 
         for adv_item in loot_table_map.adv_chain:
-            current_map = mcr_data.loot_table_maps[adv_item.name]
+            current_map = mcr_data.rand_templates[adv_item.name]
             if not adv_item.name == name:
                 current_map.is_sub = not current_map.is_loop
 
@@ -228,13 +228,13 @@ def generate_children_functions(
     reference_namespaced_ids = {}
 
     cur_link: AdvItem
-    current_map: LootTableMap
+    current_map: RandomizerTemplate
 
     is_reference = False
 
     while len(search_queue) > 0:
         cur_link = search_queue.pop()
-        current_map = mcr_data.loot_table_maps[cur_link.name]
+        current_map = mcr_data.rand_templates[cur_link.name]
 
         if is_reference:
             (mcr_data.functions[pathed_name]
@@ -320,7 +320,7 @@ def generate_conditions(
     if pathed_name in mcr_data.functions:
         mcr_data.printDetail("Warning: duplicate function!")
 
-    loot_table_map = mcr_data.loot_table_maps[adv_link.name]
+    loot_table_map = mcr_data.rand_templates[adv_link.name]
 
     helper_name = f"helper/{pathed_name}"
     namespaced_helper = mcr_data.datapack_id(helper_name)
@@ -521,7 +521,7 @@ def generate_conditions(
         else:
             conditions = PlayerKilledEntity()
             conditions.entity = Entity()
-            if "sheep" in mcr_data.loot_table_maps[adv_link.name].path:
+            if "sheep" in mcr_data.rand_templates[adv_link.name].path:
                 conditions.entity.type_ = "minecraft:sheep"
                 conditions.entity["Color"] = sheep_color_to_number[adv_link.name]
             else:
@@ -705,7 +705,7 @@ def generate_single_advancement(
     current_advs_and_recipes.append(advancement)
 
 
-def get_parent_tab(loot_table_map: LootTableMap):
+def get_parent_tab(loot_table_map: RandomizerTemplate):
     match loot_table_map.original.type_:
         case eLootTable.advancement_reward:
             return "advancement_reward"
@@ -731,7 +731,7 @@ def get_parent_tab(loot_table_map: LootTableMap):
             return "no_parent"
 
 
-def generate_advancements(mcr_data: MCRData, loot_table_map: LootTableMap):
+def generate_advancements(mcr_data: MCRData, loot_table_map: RandomizerTemplate):
     current_advs_and_recipes: list[Union[Advancement, Recipe]] = []
 
     parent = get_parent_tab(loot_table_map)
@@ -845,7 +845,7 @@ def GetZipBytes(mcr_data: MCRData) -> io.BytesIO:
     zipbytes = io.BytesIO()
     zip_ = zipfile.ZipFile(zipbytes, "w", zipfile.ZIP_DEFLATED, False)
 
-    for file_name, loot_table_map in mcr_data.loot_table_maps.items():
+    for file_name, loot_table_map in mcr_data.rand_templates.items():
         zip_.writestr(
             os.path.join(
                 "data",
@@ -1033,11 +1033,11 @@ def mc_randomizer(
     randomize(mcr_data)
 
     mcr_data.printStep("Validating loot tables...")
-    for loot_table_map in mcr_data.loot_table_maps.values():
+    for loot_table_map in mcr_data.rand_templates.values():
         validate_conditions(loot_table_map)
 
     mcr_data.printStep("Adding NBT Setters...")
-    for loot_table_map in mcr_data.loot_table_maps.values():
+    for loot_table_map in mcr_data.rand_templates.values():
         add_nbt_setter(loot_table_map)
 
     mcr_data.printStep("Populating Advancement chains...")
@@ -1047,7 +1047,7 @@ def mc_randomizer(
     initialize_functions(mcr_data)
 
     mcr_data.printStep("Generating Advancements...")
-    for loot_table_map in mcr_data.loot_table_maps.values():
+    for loot_table_map in mcr_data.rand_templates.values():
         if not loot_table_map.is_sub:
             generate_advancements(mcr_data, loot_table_map)
 
